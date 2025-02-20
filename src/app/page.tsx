@@ -1,8 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { Hero } from '@/components/landing/Hero'
-import { Features } from '@/components/landing/Features'
 import { LandingLayout } from '@/components/landing/LandingLayout'
+import { Hero } from '@/components/landing/Hero'
+import { HowItWorks } from '@/components/landing/HowItWorks'
+import { KeyFeatures } from '@/components/landing/KeyFeatures'
+import { Stats } from '@/components/landing/Stats'
+import { Testimonials } from '@/components/landing/Testimonials'
+import { CTASection } from '@/components/landing/CTASection'
 
 export const metadata = {
   title: 'LegalDocs AI - Generate Legal Documents with AI',
@@ -24,14 +28,14 @@ export default async function HomePage() {
           try {
             cookieStore.set({ name, value, ...options })
           } catch (error) {
-            console.error('Error setting cookie:', error)
+            // Handle cookie error
           }
         },
         remove(name: string, options: any) {
           try {
-            cookieStore.delete({ name, ...options })
+            cookieStore.set({ name, value: '', ...options })
           } catch (error) {
-            console.error('Error removing cookie:', error)
+            // Handle cookie error
           }
         },
       },
@@ -43,7 +47,11 @@ export default async function HomePage() {
   return (
     <LandingLayout>
       <Hero isAuthenticated={!!session} />
-      <Features />
+      <HowItWorks />
+      <KeyFeatures />
+      <Stats />
+      <Testimonials />
+      <CTASection />
     </LandingLayout>
   )
 }
