@@ -106,3 +106,30 @@
     text-wrap: balance;
   }
 }
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(241 245 249); /* Tailwind slate-100 */
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(148 163 184); /* Tailwind slate-400 */
+  border-radius: 5px;
+  border: 2px solid rgb(241 245 249);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139); /* Tailwind slate-500 */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184) rgb(241 245 249);
+}
