@@ -1,12 +1,11 @@
 export type UserSubscription = {
   id: string;
   user_id: string;
-  stripe_customer_id: string;
-  stripe_subscription_id: string;
+  status: 'active' | 'inactive' | 'cancelled';
   plan_type: 'free' | 'pro' | 'enterprise';
-  status: 'active' | 'canceled' | 'past_due';
   current_period_end: string;
   created_at: string;
+  updated_at: string;
 };
 
 export interface Template {
@@ -39,7 +38,7 @@ export interface Document {
   content: string
   user_id: string
   template_id: string | null
-  input_data: Record<string, any> | null
+  input_data: Record<string, any>
   status: 'draft' | 'generated' | 'completed'
   created_at: string
   updated_at: string
@@ -64,10 +63,11 @@ export interface DocumentInput {
 }
 
 export type UserCredits = {
-  id: string;
-  user_id: string;
-  amount: number;
-  updated_at: string;
+  id: string
+  user_id: string
+  amount: number
+  created_at: string
+  updated_at: string
 };
 
 export type PricingPlan = {
