@@ -1,40 +1,31 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
-import { marked } from 'marked'
-
-interface Template {
-  id: string
-  name: string
-  description: string
-  category: string
-  prompt_template: string
-  required_fields: {
-    [key: string]: {
-      type: string
-      label: string
-      required: boolean
-    }
-  }
-}
+import { Template } from '@/types'
+import { TemplateSelector } from './TemplateSelector'
+import { TemplateForm } from './TemplateForm'
+import { CreditBadge } from './CreditBadge'
+import { MotionDiv, fadeIn } from '@/components/shared/animations'
 
 interface DocumentGeneratorProps {
   templates: Template[]
   hasCredits: boolean
+  credits: number
   userId: string
 }
 
-export default function DocumentGenerator({ templates, hasCredits, userId }: DocumentGeneratorProps) {
+export default function DocumentGenerator({
+  templates,
+  hasCredits,
+  credits,
+  userId,
+}: DocumentGeneratorProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-
-  const { register, handleSubmit, formState: { errors } } = useForm()
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,7 +49,7 @@ export default function DocumentGenerator({ templates, hasCredits, userId }: Doc
     try {
       // Replace template variables with actual values
       let prompt = selectedTemplate.prompt_template
-      Object.keys(data).forEach(key => {
+      Object.keys(data).forEach((key) => {
         prompt = prompt.replace(`{${key}}`, data[key])
       })
 
@@ -76,149 +67,100 @@ export default function DocumentGenerator({ templates, hasCredits, userId }: Doc
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate document')
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.message || 'Failed to generate document')
       }
 
       const result = await response.json()
-      
+
       // Save the document
-      const { error: saveError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: userId,
-          template_id: selectedTemplate.id,
-          title: `${selectedTemplate.name} - ${new Date().toLocaleDateString()}`,
-          content: result.content,
-          input_data: data,
-          status: 'completed',
-        })
+      const { error: saveError } = await supabase.from('documents').insert({
+        user_id: userId,
+        template_id: selectedTemplate.id,
+        title: `${selectedTemplate.name} - ${new Date().toLocaleDateString()}`,
+        content: result.content,
+        input_data: data,
+        status: 'completed',
+      })
 
       if (saveError) throw saveError
 
-      // Deduct credit
-      const { error: creditError } = await supabase.rpc('deduct_credit', {
-        user_id: userId,
-        amount: 1,
-      })
-
-      if (creditError) throw creditError
-
-      // Show preview
-      setPreview(result.content)
-      
-      // Refresh the page to update credit count
-      router.refresh()
-    } catch (error: any) {
-      console.error('Generation error:', error)
-      setError(error.message || 'Failed to generate document. Please try again.')
+      // Redirect to documents page
+      router.push('/documents')
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while generating the document')
     } finally {
       setIsGenerating(false)
     }
   }
 
   return (
-    <div className="space-y-8">
-      {error && (
-        <div className="rounded-md bg-red-50 p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Template Selection */}
-      <div className="bg-white shadow sm:rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Template</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {templates.map((template) => (
-            <button
-              key={template.id}
-              onClick={() => setSelectedTemplate(template)}
-              className={`relative rounded-lg border p-4 text-left ${
-                selectedTemplate?.id === template.id
-                  ? 'border-indigo-600 ring-2 ring-indigo-600'
-                  : 'border-gray-300'
-              }`}
-            >
-              <h3 className="text-lg font-medium text-gray-900">{template.name}</h3>
-              <p className="mt-1 text-sm text-gray-500">{template.description}</p>
-              <span className="inline-flex items-center px-2.5 py-0.5 mt-2 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                {template.category}
-              </span>
-            </button>
-          ))}
-        </div>
+    <MotionDiv initial="initial" animate="animate" variants={fadeIn}>
+      {/* Credit Badge */}
+      <div className="mb-8">
+        <CreditBadge credits={credits} />
       </div>
 
-      {/* Document Form */}
-      {selectedTemplate && (
-        <div className="bg-white shadow sm:rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Fill Document Details
-          </h2>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {Object.entries(selectedTemplate.required_fields).map(([field, config]) => (
-              <div key={field}>
-                <label
-                  htmlFor={field}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  {config.label}
-                </label>
-                {config.type === 'text' ? (
-                  <textarea
-                    {...register(field, { required: config.required })}
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                ) : (
-                  <input
-                    type={config.type}
-                    {...register(field, { required: config.required })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                )}
-                {errors[field] && (
-                  <p className="mt-2 text-sm text-red-600">This field is required</p>
-                )}
-              </div>
-            ))}
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={isGenerating || !hasCredits}
-                className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      {/* Error Message */}
+      {error && (
+        <div className="mb-8 rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
               >
-                {isGenerating ? 'Generating...' : 'Generate Document'}
-              </button>
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </div>
-          </form>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">{error}</h3>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Document Preview */}
-      {preview && (
-        <div className="bg-white shadow sm:rounded-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Document Preview</h2>
-            <button
-              onClick={() => router.push('/documents')}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              View All Documents
-            </button>
+      <div className="rounded-lg border border-gray-200 bg-white shadow">
+        <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-3">
+          {/* Template Selection */}
+          <div className="border-b border-gray-200 p-6 lg:border-b-0 lg:border-r">
+            <h2 className="text-base font-semibold leading-7 text-gray-900">Choose Template</h2>
+            <p className="mt-1 text-sm leading-6 text-gray-600">
+              Select a template that best fits your needs
+            </p>
+            <div className="mt-6">
+              <TemplateSelector
+                templates={templates}
+                onSelect={setSelectedTemplate}
+                selectedTemplate={selectedTemplate}
+              />
+            </div>
           </div>
-          <div 
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: marked(preview) }}
-          />
+
+          {/* Template Form */}
+          <div className="col-span-2 p-6">
+            {selectedTemplate ? (
+              <TemplateForm
+                template={selectedTemplate}
+                onSubmit={onSubmit}
+                isGenerating={isGenerating}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-center text-gray-500">
+                  Select a template from the left to get started
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </MotionDiv>
   )
 }

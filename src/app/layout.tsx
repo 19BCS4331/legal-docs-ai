@@ -13,7 +13,7 @@ const jakarta = Plus_Jakarta_Sans({
   variable: '--font-jakarta'
 })
 
-const protectedPaths = ['/dashboard', '/documents', '/tags', '/profile']
+const protectedPaths = ['/dashboard', '/documents', '/tags', '/profile','/templates']
 
 export default function RootLayout({
   children,

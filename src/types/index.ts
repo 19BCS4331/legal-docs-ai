@@ -15,6 +15,10 @@ export interface Template {
   content: string
   created_at: string
   updated_at: string
+  category: string
+  available_in_plan: string[]
+  required_fields: Record<string, { label: string; type: string, required: boolean }>
+  prompt_template: string
 }
 
 export interface Tag {

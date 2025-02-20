@@ -20,7 +20,7 @@ const actions = [
   {
     name: 'Templates',
     description: 'Browse document templates',
-    href: '/documents?view=templates',
+    href: '/templates',
     icon: DocumentDuplicateIcon,
     color: 'bg-purple-500',
   },
@@ -52,18 +52,21 @@ export function QuickActions() {
         <Link
           key={action.name}
           href={action.href}
-          className="group relative overflow-hidden rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-900/5 transition-all duration-200 hover:shadow-lg hover:ring-gray-900/10"
+          className="group relative overflow-hidden rounded-lg bg-white p-6 shadow hover:shadow-md transition-all duration-200"
         >
-          <div className="flex items-center gap-x-4">
-            <div className={`p-2 rounded-lg ${action.color}`}>
-              <action.icon className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">{action.name}</h3>
-              <p className="mt-1 text-sm text-gray-500">{action.description}</p>
-            </div>
-          </div>
-          <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-transparent via-current to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-10" />
+          <div
+            className={`absolute right-0 top-0 h-24 w-24 -translate-y-8 translate-x-8 transform ${action.color} opacity-10 rounded-full group-hover:opacity-20 transition-opacity`}
+          />
+          <action.icon
+            className={`h-8 w-8 ${action.color} text-white rounded-lg p-1.5`}
+            aria-hidden="true"
+          />
+          <h3 className="mt-4 text-base font-semibold text-gray-900">
+            {action.name}
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {action.description}
+          </p>
         </Link>
       ))}
     </MotionDiv>

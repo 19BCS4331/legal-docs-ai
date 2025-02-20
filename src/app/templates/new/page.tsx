@@ -1,14 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import DocumentGenerator from '@/components/documents/DocumentGenerator'
+import { TemplateEditor } from '@/components/templates/TemplateEditor'
 
 export const metadata = {
-  title: 'New Document - LegalDocs AI',
-  description: 'Generate a new legal document using AI',
+  title: 'Create Template - LegalDocs AI',
+  description: 'Create a new document template',
 }
 
-export default async function NewDocumentPage() {
+export default async function NewTemplatePage() {
   const cookieStore = await cookies()
 
   const supabase = createServerClient(
@@ -31,25 +31,25 @@ export default async function NewDocumentPage() {
     redirect('/auth')
   }
 
-  // Get user's subscription status
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('plan_type, status')
+  // Check if user has admin privileges
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role')
     .eq('user_id', session.user.id)
     .single()
 
-  // Get user's credits
-  const { data: credits } = await supabase
-    .from('credits')
-    .select('amount')
-    .eq('user_id', session.user.id)
-    .single()
+  if (userRole?.role !== 'admin') {
+    redirect('/templates')
+  }
 
-  // Get available templates based on user's plan
-  const { data: templates } = await supabase
+  // Get existing categories for the dropdown
+  const { data: categories } = await supabase
     .from('document_templates')
-    .select('*')
-    .contains('available_in_plan', [subscription?.plan_type || 'free'])
+    .select('category')
+    .not('category', 'is', null)
+
+  // Get unique categories
+  const uniqueCategories = Array.from(new Set(categories?.map((t) => t.category) || []))
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -58,18 +58,16 @@ export default async function NewDocumentPage() {
           {/* Header */}
           <div>
             <h1 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl">
-              Create New Document
+              Create New Template
             </h1>
             <p className="mt-2 text-sm text-gray-500">
-              Choose a template and fill in the required information to generate your document.
+              Design a new document template with custom fields and AI prompt.
             </p>
           </div>
 
-          {/* Document Generator */}
-          <DocumentGenerator
-            templates={templates || []}
-            hasCredits={(credits?.amount || 0) > 0}
-            credits={credits?.amount || 0}
+          {/* Template Editor */}
+          <TemplateEditor
+            existingCategories={uniqueCategories}
             userId={session.user.id}
           />
         </div>
