@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
+import { MotionDiv, fadeIn } from '@/components/shared/animations'
 
 interface HeroProps {
   isAuthenticated?: boolean
@@ -23,7 +25,12 @@ export function Hero({ isAuthenticated }: HeroProps) {
       </div>
       <div className="py-24 sm:py-32 lg:pb-40">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
+          <MotionDiv
+            initial="initial"
+            animate="animate"
+            variants={fadeIn}
+            className="mx-auto max-w-2xl text-center"
+          >
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
               Create Legal Contracts with AI in Minutes
             </h1>
@@ -52,14 +59,14 @@ export function Hero({ isAuthenticated }: HeroProps) {
                 </>
               )}
             </div>
-          </div>
+          </MotionDiv>
           <div className="mt-16 flow-root sm:mt-24">
             <div className="-m-2 rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:-m-4 lg:rounded-2xl lg:p-4">
-              <img
-                src="https://tailwindui.com/img/component-images/project-app-screenshot.png"
+              <Image
+                src="/images/hero-image.png"
                 alt="App screenshot"
-                width={2432}
-                height={1442}
+                width={1920}
+                height={1080}
                 className="rounded-md shadow-2xl ring-1 ring-gray-900/10"
               />
             </div>

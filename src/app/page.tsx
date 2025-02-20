@@ -49,7 +49,7 @@ export default async function HomePage() {
       <Hero isAuthenticated={!!session} />
       <HowItWorks />
       <KeyFeatures />
-      <Stats />
+      {/* <Stats /> */}
       <Testimonials />
       <CTASection />
     </LandingLayout>
