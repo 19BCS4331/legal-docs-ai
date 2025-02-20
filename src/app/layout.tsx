@@ -1,7 +1,10 @@
+'use client'
+
 import './globals.css'
 import { Plus_Jakarta_Sans } from 'next/font/google'
-import { Navbar } from '@/components/layout/Navbar'
 import { ToastProvider } from '@/components/shared/Toast'
+import { usePathname } from 'next/navigation'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 
 const jakarta = Plus_Jakarta_Sans({ 
   subsets: ['latin'],
@@ -10,22 +13,25 @@ const jakarta = Plus_Jakarta_Sans({
   variable: '--font-jakarta'
 })
 
-export const metadata = {
-  title: 'Legal Docs AI',
-  description: 'AI-powered legal document management',
-}
+const protectedPaths = ['/dashboard', '/documents', '/tags', '/profile']
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+  const isProtectedRoute = protectedPaths.some(path => pathname?.startsWith(path))
+
   return (
     <html lang="en" className="h-full bg-gray-50">
       <body className={`${jakarta.className} h-full antialiased`}>
         <ToastProvider>
-          <Navbar />
-          {children}
+          {isProtectedRoute ? (
+            <DashboardLayout>{children}</DashboardLayout>
+          ) : (
+            children
+          )}
         </ToastProvider>
       </body>
     </html>

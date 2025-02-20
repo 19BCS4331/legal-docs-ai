@@ -25,7 +25,7 @@ export function NavbarClient() {
             <div className="flex h-16 justify-between">
               <div className="flex">
                 <div className="flex flex-shrink-0 items-center">
-                  <Link href="/dashboard">
+                  <Link href="/">
                     <span className="text-xl font-bold text-indigo-600">Legal Docs AI</span>
                   </Link>
                 </div>
