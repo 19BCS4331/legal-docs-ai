@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import PricingPlans from '../../components/pricing/PricingPlans'
+import { LandingLayout } from '@/components/landing/LandingLayout'
 
 export default async function PricingPage() {
   const cookieStore = await cookies()
@@ -44,130 +45,52 @@ export default async function PricingPage() {
     .single() : { data: null }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="hidden sm:block sm:absolute sm:inset-y-0 sm:h-full sm:w-full" aria-hidden="true">
-          <div className="relative h-full max-w-7xl mx-auto">
-            <svg
-              className="absolute right-full transform translate-y-1/4 translate-x-1/4 lg:translate-x-1/2"
-              width={404}
-              height={784}
-              fill="none"
-              viewBox="0 0 404 784"
-            >
-              <defs>
-                <pattern
-                  id="f210dbf6-a58d-4871-961e-36d5016a0f49"
-                  x={0}
-                  y={0}
-                  width={20}
-                  height={20}
-                  patternUnits="userSpaceOnUse"
-                >
-                  <rect x={0} y={0} width={4} height={4} className="text-gray-200" fill="currentColor" />
-                </pattern>
-              </defs>
-              <rect width={404} height={784} fill="url(#f210dbf6-a58d-4871-961e-36d5016a0f49)" />
-            </svg>
-            <svg
-              className="absolute left-full transform -translate-y-3/4 -translate-x-1/4 md:-translate-y-1/2 lg:-translate-x-1/2"
-              width={404}
-              height={784}
-              fill="none"
-              viewBox="0 0 404 784"
-            >
-              <defs>
-                <pattern
-                  id="5d0dd344-b041-4d26-bec4-8d33ea57ec9b"
-                  x={0}
-                  y={0}
-                  width={20}
-                  height={20}
-                  patternUnits="userSpaceOnUse"
-                >
-                  <rect x={0} y={0} width={4} height={4} className="text-gray-200" fill="currentColor" />
-                </pattern>
-              </defs>
-              <rect width={404} height={784} fill="url(#5d0dd344-b041-4d26-bec4-8d33ea57ec9b)" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="relative pt-16 pb-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
-                Simple, transparent pricing
-              </h1>
-              <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
-                Choose the plan that best fits your needs. All plans include a 14-day free trial.
-              </p>
-            </div>
-
-            <div className="mt-8 pb-12 sm:mt-12">
-              <div className="relative">
-                <div className="absolute inset-0 h-1/2" />
-                <div className="relative max-w-7xl mx-auto">
-                  <div className="max-w-lg mx-auto rounded-lg shadow-lg overflow-hidden lg:max-w-none lg:flex">
-                    <div className="flex-1 bg-white px-6 py-8 lg:p-12">
-                      <h3 className="text-2xl font-extrabold text-gray-900 sm:text-3xl">Why choose LegalDocs AI?</h3>
-                      <p className="mt-6 text-base text-gray-500">
-                        Get access to powerful AI-driven document analysis, management, and automation tools. Perfect for legal professionals, businesses, and organizations of all sizes.
-                      </p>
-                      <div className="mt-8">
-                        <div className="flex items-center">
-                          <h4 className="flex-shrink-0 pr-4 bg-white text-sm tracking-wider font-semibold uppercase text-indigo-600">
-                            What's included
-                          </h4>
-                          <div className="flex-1 border-t-2 border-gray-200" />
-                        </div>
-                        <ul role="list" className="mt-8 space-y-5 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:gap-y-5">
-                          {[
-                            'Advanced AI document analysis',
-                            'Secure document storage',
-                            'Smart document tagging',
-                            'Customizable templates',
-                            'Collaboration tools',
-                            'Version control',
-                            'OCR capabilities',
-                            'Export in multiple formats'
-                          ].map((feature) => (
-                            <li key={feature} className="flex items-start lg:col-span-1">
-                              <div className="flex-shrink-0">
-                                <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                              <p className="ml-3 text-sm text-gray-700">{feature}</p>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <PricingPlans 
-              currentPlan={subscription?.plan_type || 'free'}
-              isAuthenticated={!!session}
+    <LandingLayout>
+      <div className="bg-white">
+        <div className="relative isolate pt-14">
+          <div
+            className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
+            aria-hidden="true"
+          >
+            <div
+              className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
+              style={{
+                clipPath:
+                  'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
+              }}
             />
-
-            <div className="mt-12 text-center">
-              <p className="text-base text-gray-500">
-                Have questions? Contact our{' '}
-                <a href="/contact" className="font-medium text-indigo-600 hover:text-indigo-500">
-                  sales team
-                </a>
-                {' '}for custom enterprise solutions.
-              </p>
+          </div>
+          
+          <div className="py-24 sm:py-32">
+            <div className="mx-auto max-w-7xl px-6 lg:px-8">
+              <div className="mx-auto max-w-4xl text-center">
+                <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+                  Simple pricing for everyone
+                </h1>
+                <p className="mt-6 text-lg leading-8 text-gray-600">
+                  Choose the perfect plan for your needs. Whether you're just starting out or running a large organization,
+                  we have a plan that's right for you.
+                </p>
+              </div>
+              <PricingPlans isAuthenticated={!!session} currentPlan={subscription?.plan_type || 'free'} />
             </div>
+          </div>
+
+          <div
+            className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]"
+            aria-hidden="true"
+          >
+            <div
+              className="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]"
+              style={{
+                clipPath:
+                  'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
+              }}
+            />
           </div>
         </div>
       </div>
-    </div>
+    </LandingLayout>
   )
 }
 

@@ -15,6 +15,7 @@ import {
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { createBrowserClient } from "@supabase/ssr";
+import { ProfileModal } from "@/components/profile/ProfileModal";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
@@ -29,15 +30,56 @@ function classNames(...classes: string[]) {
 
 export function SideNav() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [credits, setCredits] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const pathname = usePathname();
 
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const handleSignOut = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
     await supabase.auth.signOut();
     window.location.href = "/";
+  };
+
+  const handleProfileClick = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUser(user);
+      
+      // Fetch profile data
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      setProfile(profileData);
+
+      // Fetch credits
+      const { data: creditsData } = await supabase
+        .from('credits')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      setCredits(creditsData);
+
+      // Fetch subscription
+      const { data: subscriptionData } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('subscription_end_date', { ascending: false })
+        .limit(1)
+        .single();
+      setSubscription(subscriptionData);
+    }
+    setIsProfileOpen(true);
   };
 
   return (
@@ -135,26 +177,16 @@ export function SideNav() {
                         </ul>
                       </li>
                       <li className="mt-auto">
-                        <Link
-                          href="/profile"
-                          className={classNames(
-                            pathname === "/profile"
-                              ? "bg-gray-50 text-indigo-600"
-                              : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50",
-                            "group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
-                          )}
+                        <button
+                          onClick={handleProfileClick}
+                          className="group -mx-2 flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
                         >
                           <UserCircleIcon
-                            className={classNames(
-                              pathname === "/profile"
-                                ? "text-indigo-600"
-                                : "text-gray-400 group-hover:text-indigo-600",
-                              "h-6 w-6 shrink-0"
-                            )}
+                            className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
                             aria-hidden="true"
                           />
                           Profile
-                        </Link>
+                        </button>
                         <button
                           onClick={handleSignOut}
                           className="group -mx-2 flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
@@ -214,36 +246,31 @@ export function SideNav() {
                 </ul>
               </li>
               <li className="mt-auto">
-                <Link
-                  href="/profile"
-                  className={classNames(
-                    pathname === "/profile"
-                      ? "bg-gray-50 text-indigo-600"
-                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50",
-                    "group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
-                  )}
-                >
-                  <UserCircleIcon
+                <div className="space-y-1">
+                  <button
+                    onClick={handleProfileClick}
                     className={classNames(
-                      pathname === "/profile"
-                        ? "text-indigo-600"
-                        : "text-gray-400 group-hover:text-indigo-600",
-                      "h-6 w-6 shrink-0"
+                      "text-gray-700 hover:text-indigo-600 hover:bg-gray-50",
+                      "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full"
                     )}
-                    aria-hidden="true"
-                  />
-                  Profile
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="group -mx-2 flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
-                >
-                  <ArrowLeftOnRectangleIcon
-                    className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
-                    aria-hidden="true"
-                  />
-                  Sign out
-                </button>
+                  >
+                    <UserCircleIcon
+                      className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
+                      aria-hidden="true"
+                    />
+                    Profile
+                  </button>
+                  <button
+                    onClick={handleSignOut}
+                    className="group flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
+                  >
+                    <ArrowLeftOnRectangleIcon
+                      className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
+                      aria-hidden="true"
+                    />
+                    Sign out
+                  </button>
+                </div>
               </li>
             </ul>
           </nav>
@@ -266,6 +293,16 @@ export function SideNav() {
           </Link>
         </div>
       </div>
+
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        profile={profile}
+        credits={credits}
+        subscription={subscription}
+        supabase={supabase}
+      />
     </>
   );
 }

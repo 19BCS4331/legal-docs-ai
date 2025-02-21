@@ -7,9 +7,9 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { createBrowserClient } from '@supabase/ssr'
 
 const navigation = [
-  { name: 'Features', href: '#features' },
+  { name: 'Features', href: '/features' },
   { name: 'Pricing', href: '/pricing' },
-  { name: 'About', href: '#about' },
+  { name: 'About', href: '/about' },
 ]
 
 export function TopNavbar() {

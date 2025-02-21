@@ -8,8 +8,8 @@ interface CreditBalanceProps {
 }
 
 export function CreditBalance({ credits, subscription }: CreditBalanceProps) {
-  const isSubscribed = subscription?.status === 'active'
-  const planName = subscription?.plan_type || 'Free'
+  const planType = subscription?.plan_type || 'free'
+  const isUpgradeable = planType === 'free' || planType === 'pro'
   const creditBalance = credits?.amount || 0
 
   return (
@@ -22,7 +22,7 @@ export function CreditBalance({ credits, subscription }: CreditBalanceProps) {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-900">Current Plan</p>
-            <p className="text-2xl font-semibold text-indigo-600 capitalize">{planName}</p>
+            <p className="text-2xl font-semibold text-indigo-600 capitalize">{planType}</p>
           </div>
         </div>
         <div className="flex items-center">
@@ -34,7 +34,7 @@ export function CreditBalance({ credits, subscription }: CreditBalanceProps) {
             <p className="text-2xl font-semibold text-indigo-600">{creditBalance}</p>
           </div>
         </div>
-        {!isSubscribed && (
+        {isUpgradeable && (
           <div className="mt-6">
             <Link
               href="/pricing"
