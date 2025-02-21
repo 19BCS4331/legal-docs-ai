@@ -51,8 +51,8 @@ export default function AuthForm() {
         router.refresh()
         router.push('/dashboard')
       }
-    } catch (error: any) {
-      setError(error.message || 'An error occurred during authentication')
+    } catch (error: Error | any) {
+      setError(error?.message || 'An error occurred during authentication')
     } finally {
       setIsLoading(false)
     }
@@ -67,8 +67,8 @@ export default function AuthForm() {
         }
       })
       if (error) throw error
-    } catch (error: any) {
-      setError(error.message || 'An error occurred during social login')
+    } catch (error: Error | any) {
+      setError(error?.message || 'An error occurred during social login')
     }
   }
 
