@@ -61,11 +61,11 @@ export function KeyFeatures() {
             className="relative"
           >
             <img
-              src="/images/features-img.png"
-              alt="Product screenshot"
-              className="w-[48rem] max-w-none rounded-xl shadow-xl ring-1 ring-gray-400/10 sm:w-[57rem] md:-ml-4 lg:-ml-0"
-              width={1920}
-              height={1080}
+              src="/images/features-img.PNG"
+              alt="Features screenshot"
+              className="w-[48rem] max-w-none rounded-xl shadow-xl ring-1 ring-gray-400/10 sm:w-[57rem]"
+              width={2432}
+              height={1442}
             />
           </MotionDiv>
         </MotionDiv>
