@@ -4,16 +4,27 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Document } from '@/types'
 import { createBrowserClient } from '@supabase/ssr'
-import { DocumentTextIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { 
+  DocumentTextIcon, 
+  TrashIcon,
+  PencilIcon,
+  ShareIcon,
+  EyeIcon,
+  ChevronUpDownIcon
+} from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { useToast } from '../shared/Toast'
 import { DocumentSearch } from './DocumentSearch'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import { useRouter } from 'next/navigation'
 
-export default function DocumentList() {
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+interface DocumentListProps {
+  documents: Document[]
+}
+
+export default function DocumentList({ documents: initialDocuments }: DocumentListProps) {
+  const [documents, setDocuments] = useState<Document[]>(initialDocuments)
+  const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<Document['status'] | 'all'>('all')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -29,37 +40,17 @@ export default function DocumentList() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    loadDocuments()
-  }, [])
-
   const loadDocuments = async () => {
     try {
       setIsLoading(true)
       const { data, error } = await supabase
         .from('documents')
-        .select(`
-          *,
-          template:document_templates(*),
-          tags:document_tags(
-            tag:tags(
-              id,
-              name,
-              color
-            )
-          )
-        `)
-        .order('created_at', { ascending: false })
+        .delete()
+        .eq('id', documentToDelete?.id)
 
       if (error) throw error
 
-      // Transform the nested tags structure
-      const docsWithTags = data?.map(doc => ({
-        ...doc,
-        tags: doc.tags?.map((t:any) => t.tag) || []
-      })) || []
-
-      setDocuments(docsWithTags)
+      setDocuments(documents.filter(doc => doc.id !== documentToDelete?.id))
     } catch (err) {
       console.error('Error loading documents:', err)
       showToast('error', 'Error loading documents', 'Failed to load documents. Please try again.')
@@ -115,17 +106,42 @@ export default function DocumentList() {
       : new Date(b[sortField]).getTime() - new Date(a[sortField]).getTime()
   })
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="animate-pulse bg-white rounded-lg p-6">
+            <div className="flex items-center space-x-4">
+              <div className="h-12 w-12 bg-gray-200 rounded-lg"></div>
+              <div className="flex-1">
+                <div className="h-4 w-1/4 bg-gray-200 rounded"></div>
+                <div className="mt-2 h-3 w-1/2 bg-gray-100 rounded"></div>
+              </div>
+              <div className="flex space-x-2">
+                <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   if (!documents || documents.length === 0) {
     return (
       <div className="text-center py-12">
-        <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No documents</h3>
-        <p className="mt-1 text-sm text-gray-500">Get started by creating a new document.</p>
+        <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center">
+          <DocumentTextIcon className="h-12 w-12 text-gray-400" />
+        </div>
+        <h3 className="mt-4 text-lg font-semibold text-gray-900">No documents</h3>
+        <p className="mt-2 text-sm text-gray-500">Get started by creating a new document.</p>
         <div className="mt-6">
           <Link
             href="/documents/new"
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
+            <DocumentTextIcon className="-ml-0.5 h-5 w-5" />
             Create Document
           </Link>
         </div>
@@ -134,7 +150,7 @@ export default function DocumentList() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <DocumentSearch
         onSearch={setSearchQuery}
         onFilter={setStatusFilter}
@@ -145,82 +161,94 @@ export default function DocumentList() {
         onTagsChange={setSelectedTags}
       />
 
-      {isLoading ? (
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="overflow-hidden p-6">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredDocuments.map((document) => (
-            <Link
+            <div
               key={document.id}
-              href={`/documents/${document.id}`}
-              className="group block"
+              className="group relative bg-white rounded-xl shadow-sm ring-1 ring-gray-900/5 hover:shadow-md transition-all duration-150 ease-in-out"
             >
-              <div className="relative flex flex-col h-full overflow-hidden rounded-lg border border-gray-300 bg-white p-4 hover:border-gray-400 hover:shadow-sm transition-all">
-                <div className="flex items-center gap-2 mb-2">
-                  <DocumentTextIcon className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
-                    {document.title}
-                  </h3>
+              <div className="p-6">
+                <div className="flex items-center gap-x-3">
+                  <div className={`rounded-lg p-2 ${
+                    document.status === 'completed'
+                      ? 'bg-green-50'
+                      : document.status === 'generated'
+                      ? 'bg-blue-50'
+                      : 'bg-yellow-50'
+                  }`}>
+                    <DocumentTextIcon className={`h-5 w-5 ${
+                      document.status === 'completed'
+                        ? 'text-green-600'
+                        : document.status === 'generated'
+                        ? 'text-blue-600'
+                        : 'text-yellow-600'
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/documents/${document.id}`} className="focus:outline-none">
+                      <h3 className="text-base font-semibold leading-6 text-gray-900 hover:text-indigo-600 truncate">
+                        {document.title}
+                      </h3>
+                    </Link>
+                    <p className="mt-1 text-sm text-gray-500 truncate">
+                      {document.template?.name || 'No template'}
+                    </p>
+                  </div>
                   <button
                     onClick={(e) => handleDeleteClick(e, document)}
-                    className="hidden group-hover:inline-flex ml-auto items-center rounded-md bg-white p-1 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 text-gray-400 hover:text-red-500"
                   >
-                    <TrashIcon className="h-4 w-4" />
+                    <TrashIcon className="h-5 w-5" />
                   </button>
                 </div>
 
-                <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                <div className="mt-3 text-sm text-gray-500 line-clamp-2">
                   {document.content}
-                </p>
+                </div>
 
-                <div className="mt-auto">
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {document.tags?.map((tag) => (
+                {document.tags && document.tags.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {document.tags.map((tag) => (
                       <span
                         key={tag.id}
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                        className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
                         style={{
-                          backgroundColor: tag.color + '33',
-                          color: tag.color
+                          backgroundColor: `${tag.color}15`,
+                          color: tag.color,
                         }}
                       >
+                        <span
+                          className="mr-1 h-1 w-1 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
                         {tag.name}
                       </span>
                     ))}
                   </div>
+                )}
 
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center gap-x-2">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium capitalize ${
                       document.status === 'completed'
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
                         : document.status === 'generated'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-yellow-100 text-yellow-700'
+                        ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20'
+                        : 'bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20'
                     }`}>
-                      {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
+                      {document.status}
                     </span>
-                    <time dateTime={document.created_at}>
-                      {format(new Date(document.created_at), 'MMM d, yyyy')}
+                    <time dateTime={document.updated_at} className="text-xs text-gray-500">
+                      {format(new Date(document.updated_at), 'MMM d, yyyy')}
                     </time>
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
-      )}
-
-      {filteredDocuments.length === 0 && (
-        <div className="text-center py-12">
-          <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-semibold text-gray-900">No documents found</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Try adjusting your search or filter criteria.
-          </p>
-        </div>
-      )}
+      </div>
 
       <ConfirmDialog
         isOpen={!!documentToDelete}

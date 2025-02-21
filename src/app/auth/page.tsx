@@ -1,18 +1,53 @@
 import AuthForm from '@/components/auth/AuthForm'
+import Image from 'next/image'
 
 export default function AuthPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-4xl font-bold text-indigo-600">LegalDocs AI</h1>
-        <h2 className="mt-2 text-center text-sm text-gray-600">
-          Generate legal documents with AI
-        </h2>
-      </div>
+    <div className="min-h-screen bg-white">
+      <div className="flex min-h-screen">
+        {/* Left side - Auth form */}
+        <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
+          <div className="mx-auto w-full max-w-sm lg:w-96">
+            <div className="flex items-center justify-center">
+              {/* <Image
+                src="/logo.png"
+                alt="LegalDocs AI"
+                width={48}
+                height={48}
+                className="h-12 w-auto"
+              /> */}
+              <h1 className="text-3xl font-bold text-indigo-600">LegalDocs AI</h1>
+            </div>
+            <div className="mt-8">
+              <AuthForm />
+            </div>
+          </div>
+        </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <AuthForm />
+        {/* Right side - Background illustration */}
+        <div className="hidden lg:block relative w-0 flex-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700">
+            <div className="absolute inset-0 bg-[url('/auth-pattern.svg')] opacity-30"></div>
+            <div className="absolute inset-0 flex items-center justify-center p-12">
+              <div className="text-white max-w-lg">
+                <h2 className="text-4xl font-bold mb-6">Transform Your Legal Document Workflow</h2>
+                <p className="text-xl opacity-90">
+                  Generate, manage, and collaborate on legal documents with the power of AI. 
+                  Save time and reduce errors with our intelligent document automation.
+                </p>
+                <div className="mt-8 grid grid-cols-2 gap-4">
+                  <div className="bg-white bg-opacity-10 rounded-lg p-4">
+                    <div className="text-3xl font-bold">100+</div>
+                    <div className="text-sm opacity-80">Document Templates</div>
+                  </div>
+                  <div className="bg-white bg-opacity-10 rounded-lg p-4">
+                    <div className="text-3xl font-bold">24/7</div>
+                    <div className="text-sm opacity-80">AI Assistance</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

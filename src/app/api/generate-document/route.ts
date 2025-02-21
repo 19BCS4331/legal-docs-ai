@@ -78,12 +78,14 @@ export async function POST(request: Request) {
       return new NextResponse('Template not found', { status: 404 })
     }
 
-    // Get user's subscription to verify template access
-    const { data: subscription, error: subError } = await supabase
-      .from('subscriptions')
-      .select('plan_type')
-      .eq('user_id', session.user.id)
-      .single()
+    const { data: subscription, error: subError } =  await supabase
+    .from('subscriptions')
+    .select('plan_type')
+    .eq('user_id', session.user.id)
+    .eq('status', 'active')
+    .order('subscription_end_date', { ascending: false })
+    .limit(1)
+    .single()
 
     if (subError) {
       console.error('Subscription check error:', subError)

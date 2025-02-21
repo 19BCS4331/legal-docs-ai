@@ -32,7 +32,7 @@ export function ShareDialog({ isOpen, document, onClose }: ShareDialogProps) {
       
       // First, check if the user exists
       const { data: users, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('id')
         .eq('email', email)
         .single()

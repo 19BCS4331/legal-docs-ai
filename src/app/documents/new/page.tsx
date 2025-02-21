@@ -32,11 +32,20 @@ export default async function NewDocumentPage() {
   }
 
   // Get user's subscription status
-  const { data: subscription } = await supabase
+  // const { data: subscription } = await supabase
+  //   .from('subscriptions')
+  //   .select('plan_type, status')
+  //   .eq('user_id', session.user.id)
+  //   .single()
+
+    const { data: subscription } = session ? await supabase
     .from('subscriptions')
-    .select('plan_type, status')
+    .select('*')
     .eq('user_id', session.user.id)
-    .single()
+    .eq('status', 'active')
+    .order('subscription_end_date', { ascending: false })
+    .limit(1)
+    .single() : { data: null }
 
   // Get user's credits
   const { data: credits } = await supabase

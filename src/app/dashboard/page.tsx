@@ -70,9 +70,12 @@ export default async function DashboardPage() {
     .single()
 
   const { data: subscription } = await supabase
-    .from('user_subscriptions')
+    .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
+    .eq('status', 'active')
+    .order('subscription_end_date', { ascending: false })
+    .limit(1)
     .single()
 
   const stats = {

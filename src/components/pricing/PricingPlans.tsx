@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckIcon } from '@heroicons/react/24/outline'
-import { loadStripe } from '@stripe/stripe-js'
-import { createBrowserClient } from '@supabase/ssr'
+import { CheckIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+import Script from 'next/script'
+import axios from 'axios'
 
 interface PricingPlansProps {
   currentPlan: string
@@ -24,9 +22,13 @@ const plans = [
       'Basic templates',
       'Email support',
       'PDF export',
+      'Basic AI analysis',
+      'Standard OCR',
+      '2 GB storage',
+      'Community forums'
     ],
     documentsPerMonth: 3,
-    stripePriceId: null,
+    amount: 0,
   },
   {
     name: 'Pro',
@@ -38,11 +40,15 @@ const plans = [
       'All templates',
       'Priority support',
       'PDF & Word export',
-      'Custom branding',
+      'Advanced AI analysis',
+      'Enhanced OCR',
+      '20 GB storage',
       'API access (100 calls/month)',
+      'Custom branding',
+      'Collaboration tools'
     ],
     documentsPerMonth: -1, // unlimited
-    stripePriceId: 'price_pro_monthly',
+    amount: 999,
     isPopular: true,
   },
   {
@@ -52,15 +58,20 @@ const plans = [
     description: 'For large organizations',
     features: [
       'Unlimited documents',
-      'All templates',
+      'Custom templates',
       '24/7 phone support',
       'All export formats',
-      'Custom templates',
+      'Premium AI features',
+      'Premium OCR',
+      'Unlimited storage',
       'Unlimited API access',
       'SSO & Team management',
+      'Dedicated account manager',
+      'Custom integrations',
+      'SLA guarantee'
     ],
     documentsPerMonth: -1,
-    stripePriceId: 'price_enterprise_monthly',
+    amount: 4999,
   },
 ]
 
@@ -68,114 +79,155 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const router = useRouter()
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  const handleSubscribe = async (planId: string, stripePriceId: string | null) => {
+  const handlePayment = async (plan: typeof plans[0]) => {
     if (!isAuthenticated) {
       router.push('/auth?redirectTo=/pricing')
       return
     }
 
-    if (!stripePriceId) return // Free plan
+    if (plan.id === 'free') {
+      // Handle free plan subscription
+      try {
+        const response = await fetch('/api/subscribe-free', {
+          method: 'POST',
+        })
+        if (response.ok) {
+          alert('Successfully subscribed to free plan!')
+          router.refresh()
+        }
+      } catch (error) {
+        console.error('Error subscribing to free plan:', error)
+        alert('Failed to subscribe to free plan. Please try again.')
+      }
+      return
+    }
 
-    setIsLoading(planId)
+    setIsLoading(plan.id)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) throw new Error('Not authenticated')
-
-      // Create Stripe Checkout Session
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: stripePriceId,
-          userId: session.user.id,
-          planId,
-        }),
+      // Create order
+      const orderResponse = await axios.post('/api/createOrder', {
+        amount: plan.amount,
+        currency: 'INR',
+        planId: plan.id,
       })
 
-      const { sessionId } = await response.json()
-      
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise
-      if (stripe) {
-        const { error } = await stripe.redirectToCheckout({ sessionId })
-        if (error) {
-          throw error
-        }
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: plan.amount * 100, // Amount in paise
+        currency: 'INR',
+        name: 'LegalDocs AI',
+        description: `Subscribe to ${plan.name} Plan`,
+        order_id: orderResponse.data.orderId,
+        handler: async function (response: any) {
+          try {
+            const verifyResponse = await axios.post('/api/verifyOrder', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              planId: plan.id,
+            })
+
+            if (verifyResponse.data.success) {
+              alert('Payment successful! Your subscription has been activated.')
+              router.refresh()
+            }
+          } catch (error) {
+            console.error('Payment verification failed:', error)
+            alert('Payment verification failed. Please contact support.')
+          }
+        },
+        prefill: {
+          name: 'User',
+          email: 'user@example.com',
+        },
+        theme: {
+          color: '#4F46E5',
+        },
       }
+
+      const razorpay = new (window as any).Razorpay(options)
+      razorpay.on('payment.failed', function (response: any) {
+        alert('Payment failed. Please try again.')
+        console.error('Payment failed:', response.error)
+      })
+      razorpay.open()
     } catch (error) {
-      console.error('Subscription error:', error)
-      alert('Failed to process subscription. Please try again.')
+      console.error('Error initiating payment:', error)
+      alert('Failed to initiate payment. Please try again.')
     } finally {
       setIsLoading(null)
     }
   }
 
   return (
-    <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
-      {plans.map((plan) => {
-        const isCurrentPlan = currentPlan === plan.id
-        return (
-          <div
-            key={plan.name}
-            className={`rounded-lg shadow-sm divide-y divide-gray-200 ${
-              plan.isPopular ? 'border-2 border-indigo-500' : 'border border-gray-200'
-            }`}
-          >
-            <div className="p-6">
+    <>
+      <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
+        {plans.map((plan) => {
+          const isCurrentPlan = currentPlan === plan.id
+          return (
+            <div
+              key={plan.name}
+              className={`relative rounded-2xl ${
+                plan.isPopular 
+                  ? 'border-2 border-indigo-500 shadow-xl' 
+                  : 'border border-gray-200 shadow-sm'
+              } bg-white`}
+            >
               {plan.isPopular && (
-                <p className="absolute top-0 -translate-y-1/2 transform">
-                  <span className="inline-flex rounded-full bg-indigo-500 px-4 py-1 text-sm font-semibold text-white">
-                    Most popular
+                <div className="absolute -top-5 inset-x-0 flex items-center justify-center">
+                  <span className="inline-flex items-center px-4 py-1 rounded-full text-sm font-semibold tracking-wide bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md">
+                    <SparklesIcon className="w-4 h-4 mr-1" />
+                    Most Popular
                   </span>
-                </p>
+                </div>
               )}
-              <h2 className="text-lg font-medium text-gray-900">{plan.name}</h2>
-              <p className="mt-4 text-sm text-gray-500">{plan.description}</p>
-              <p className="mt-8">
-                <span className="text-4xl font-extrabold text-gray-900">{plan.priceMonthly}</span>
-                <span className="text-base font-medium text-gray-500">/month</span>
-              </p>
-              <button
-                onClick={() => handleSubscribe(plan.id, plan.stripePriceId)}
-                disabled={isLoading === plan.id || isCurrentPlan}
-                className={`mt-8 block w-full rounded-md px-4 py-2 text-sm font-semibold text-center ${
-                  isCurrentPlan
-                    ? 'bg-gray-100 text-gray-600 cursor-default'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
-                }`}
-              >
-                {isLoading === plan.id
-                  ? 'Processing...'
-                  : isCurrentPlan
-                  ? 'Current Plan'
-                  : 'Subscribe'}
-              </button>
+              <div className="p-8">
+                <h2 className="text-2xl font-bold leading-8 text-gray-900">{plan.name}</h2>
+                <p className="mt-4 text-sm text-gray-500">{plan.description}</p>
+                <p className="mt-8 flex items-baseline justify-center gap-x-2">
+                  <span className="text-5xl font-bold tracking-tight text-gray-900">{plan.priceMonthly}</span>
+                  <span className="text-sm font-semibold leading-6 tracking-wide text-gray-600">/month</span>
+                </p>
+                <button
+                  onClick={() => handlePayment(plan)}
+                  disabled={isLoading === plan.id || isCurrentPlan}
+                  className={`mt-8 block w-full rounded-lg px-4 py-3.5 text-sm font-semibold text-center shadow-sm transition-all duration-150 ease-in-out ${
+                    isCurrentPlan
+                      ? 'bg-gray-100 text-gray-600 cursor-default'
+                      : plan.isPopular
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50'
+                  }`}
+                >
+                  {isLoading === plan.id
+                    ? 'Processing...'
+                    : isCurrentPlan
+                    ? 'Current Plan'
+                    : 'Get Started'}
+                </button>
+              </div>
+              <div className="px-8 pb-8">
+                <h3 className="text-xs font-semibold text-gray-900 tracking-wide uppercase">
+                  Features included
+                </h3>
+                <ul role="list" className="mt-6 space-y-4">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex space-x-3">
+                      <CheckIcon className="flex-shrink-0 h-5 w-5 text-green-500" />
+                      <span className="text-sm text-gray-600">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div className="px-6 pt-6 pb-8">
-              <h3 className="text-xs font-medium text-gray-900 tracking-wide uppercase">
-                What's included
-              </h3>
-              <ul role="list" className="mt-6 space-y-4">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex space-x-3">
-                    <CheckIcon className="flex-shrink-0 h-5 w-5 text-green-500" />
-                    <span className="text-sm text-gray-500">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+      <Script
+        id="razorpay-checkout-js"
+        src="https://checkout.razorpay.com/v1/checkout.js"
+      />
+    </>
   )
 }
