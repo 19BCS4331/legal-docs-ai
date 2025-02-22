@@ -12,6 +12,9 @@ import { ShareDialog } from './ShareDialog'
 import { ExportDialog } from './ExportDialog'
 import { TagsDialog } from './TagsDialog'
 import { useToast } from '../shared/Toast'
+import React from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface DocumentViewerProps {
   document: Document
@@ -258,7 +261,18 @@ export default function DocumentViewer({ document: initialDocument }: DocumentVi
               </div>
             </div>
           ) : (
-            <div className="prose max-w-none mt-8" dangerouslySetInnerHTML={{ __html: marked(document.content) }} />
+            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+              <div className="px-4 py-6 sm:p-8">
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    className="prose prose-slate prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-a:text-blue-600 hover:prose-a:text-blue-500"
+                  >
+                    {document.content}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
           )}
 
           {!isEditing && !isLoadingVersions && (
@@ -277,11 +291,13 @@ export default function DocumentViewer({ document: initialDocument }: DocumentVi
         onClose={() => setIsShareDialogOpen(false)}
       />
 
-      <ExportDialog
-        isOpen={isExportDialogOpen}
-        document={document}
-        onClose={() => setIsExportDialogOpen(false)}
-      />
+      {isExportDialogOpen && (
+        <ExportDialog
+          isOpen={isExportDialogOpen}
+          setIsOpen={setIsExportDialogOpen}
+          documentData={document}
+        />
+      )}
 
       <TagsDialog
         isOpen={isTagsDialogOpen}

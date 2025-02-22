@@ -1,15 +1,14 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { generateDocument } from '@/lib/openai/client'
 
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
-    const { prompt, templateId, inputData } = await request.json()
+    const { templateId } = await request.json()
 
-    if (!prompt || !templateId) {
-      return new NextResponse('Missing required fields', { status: 400 })
+    if (!templateId) {
+      return new NextResponse('Missing template ID', { status: 400 })
     }
 
     const supabase = createServerClient(
@@ -79,13 +78,13 @@ export async function POST(request: Request) {
     }
 
     const { data: subscription, error: subError } =  await supabase
-    .from('subscriptions')
-    .select('plan_type')
-    .eq('user_id', session.user.id)
-    .eq('status', 'active')
-    .order('subscription_end_date', { ascending: false })
-    .limit(1)
-    .single()
+      .from('subscriptions')
+      .select('plan_type')
+      .eq('user_id', session.user.id)
+      .eq('status', 'active')
+      .order('subscription_end_date', { ascending: false })
+      .limit(1)
+      .single()
 
     if (subError) {
       console.error('Subscription check error:', subError)
@@ -97,38 +96,11 @@ export async function POST(request: Request) {
       return new NextResponse('Template not available in your plan', { status: 403 })
     }
 
-    // Generate document
-    const content = await generateDocument(prompt, undefined, {
-      userPlan,
-      stream: userPlan !== 'free' // Enable streaming for pro and enterprise users
-    })
-
-    // Log generation details
-    console.log('OpenAI API Generation:', {
-      userPlan,
-      model: 'gpt-4-0125-preview',
-      timestamp: new Date().toISOString()
-    })
-
-    // Deduct credit
-    const { error: deductError } = await supabase.rpc('deduct_credit', {
-      user_id: session.user.id,
-      amount: 1
-    })
-
-    if (deductError) {
-      console.error('Credit deduction error:', deductError)
-      return new NextResponse('Error deducting credits', { status: 500 })
-    }
-
-    return NextResponse.json({ 
-      content,
-      model: 'gpt-4-0125-preview'
-    })
+    return NextResponse.json({ userPlan })
   } catch (error: any) {
-    console.error('Document generation error:', error)
+    console.error('Verification error:', error)
     return new NextResponse(
-      error.message || 'Internal server error', 
+      error.message || 'Internal server error',
       { status: error.status || 500 }
     )
   }

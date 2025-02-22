@@ -53,32 +53,182 @@ export default function DocumentGenerator({
         prompt = prompt.replace(`{${key}}`, data[key])
       })
 
-      // Generate document using OpenAI
-      const response = await fetch('/api/generate-document', {
+      // First, verify credits and get user's plan
+      const verifyResponse = await fetch('/api/generate-document/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt,
           templateId: selectedTemplate.id,
-          inputData: data,
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(errorData?.message || 'Failed to generate document')
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json().catch(() => null)
+        throw new Error(errorData?.message || 'Failed to verify document generation')
       }
 
-      const result = await response.json()
+      const { userPlan } = await verifyResponse.json()
+
+      // Generate document using Puter.js for pro/enterprise, fallback to API for free
+      let content: string
+      let modelUsed: string
+      let usedPuter: boolean = false
+
+      console.log(`Starting document generation - User Plan: ${userPlan}`)
+
+      if ((userPlan === 'pro' || userPlan === 'enterprise') && typeof window !== 'undefined' && (window as any).puter) {
+        const puter = (window as any).puter
+        const model = 'claude-3-5-sonnet'
+        modelUsed = model
+        usedPuter = true
+
+        console.log(`Using Puter.js with model: ${model}`)
+
+        try {
+          setError('Initializing AI model... You may need to authorize access (one-time only)')
+
+          // Enhance prompt to request Markdown formatting
+          const formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${prompt}`
+
+          // Log the prompt being sent
+          console.log('Sending prompt to Puter.js:', formattedPrompt)
+
+          // Call Puter.js chat API with streaming
+          const response = await puter.ai.chat(formattedPrompt, {
+            model,
+            stream: true,
+          })
+
+          // Log the response object
+          console.log('Puter.js response:', response)
+
+          // Handle streaming response
+          let fullText = ''
+          try {
+            if (response && typeof response[Symbol.asyncIterator] === 'function') {
+              for await (const part of response) {
+                console.log('Stream part:', part)
+                if (part?.text) {
+                  fullText += part.text
+                }
+              }
+            } else {
+              throw new Error('Response is not a valid stream')
+            }
+          } catch (streamError) {
+            console.error('Streaming error:', streamError)
+            throw streamError
+          }
+
+          // Set the content
+          content = fullText
+
+          if (!content) {
+            console.error('Empty content from Puter.js')
+            throw new Error('Empty content received from Puter.js')
+          }
+
+          console.log('Successfully generated document with Puter.js')
+          console.log('Content length:', content.length)
+          console.log('Content preview:', content.substring(0, 100))
+          setError(null)
+        } catch (error: any) {
+          console.error('Puter.js error:', error)
+          console.log('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          })
+          console.log('Falling back to OpenAI API')
+          usedPuter = false
+
+          // Fallback to OpenAI API
+          const response = await fetch('/api/generate-document', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompt,
+              templateId: selectedTemplate.id,
+              inputData: data,
+            }),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null)
+            throw new Error(errorData?.message || 'Failed to generate document')
+          }
+
+          const result = await response.json()
+          content = result.content
+          modelUsed = result.model
+
+          if (!content) {
+            throw new Error('Empty content received from OpenAI API')
+          }
+        }
+      } else {
+        // Log why we're falling back
+        if (userPlan === 'free') {
+          console.log('Using OpenAI API (Free plan user)')
+        } else if (typeof window === 'undefined') {
+          console.log('Using OpenAI API (Window object not available)')
+        } else if (!(window as any).puter) {
+          console.log('Using OpenAI API (Puter.js not loaded)')
+        }
+
+        // Fallback to OpenAI API
+        const response = await fetch('/api/generate-document', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            templateId: selectedTemplate.id,
+            inputData: data,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null)
+          throw new Error(errorData?.message || 'Failed to generate document')
+        }
+
+        const result = await response.json()
+        content = result.content
+        modelUsed = result.model
+        usedPuter = false
+        console.log(`Successfully generated document with OpenAI API using model: ${result.model}`)
+      }
+
+      // Log final generation details
+      console.log('Document Generation Summary:', {
+        userPlan,
+        modelUsed,
+        usedPuter,
+        contentLength: content.length,
+        timestamp: new Date().toISOString()
+      })
+
+      // Deduct credit
+      const deductResponse = await fetch('/api/generate-document/deduct-credit', {
+        method: 'POST',
+      })
+
+      if (!deductResponse.ok) {
+        throw new Error('Failed to deduct credit')
+      }
 
       // Save the document
       const { error: saveError } = await supabase.from('documents').insert({
         user_id: userId,
         template_id: selectedTemplate.id,
         title: `${selectedTemplate.name} - ${new Date().toLocaleDateString()}`,
-        content: result.content,
+        content,
         input_data: data,
         status: 'completed',
       })

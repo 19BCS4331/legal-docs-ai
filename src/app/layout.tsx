@@ -5,6 +5,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google'
 import { ToastProvider } from '@/components/shared/Toast'
 import { usePathname } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import Script from 'next/script'
 
 const jakarta = Plus_Jakarta_Sans({ 
   subsets: ['latin'],
@@ -25,6 +26,12 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="h-full bg-gray-50">
+      <head>
+        <Script 
+          src="https://js.puter.com/v2/" 
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className={`${jakarta.className} h-full antialiased`}>
         <ToastProvider>
           {isProtectedRoute ? (

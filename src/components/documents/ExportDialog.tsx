@@ -1,40 +1,162 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import React, { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Document } from '@/types'
+import { DocumentArrowDownIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { exportDocument, ExportFormat } from '@/utils/documentExport'
 import { useToast } from '../shared/Toast'
+import html2pdf from 'html2pdf.js'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface ExportDialogProps {
   isOpen: boolean
-  document: Document
-  onClose: () => void
+  setIsOpen: (isOpen: boolean) => void
+  documentData: Document
 }
 
-export function ExportDialog({ isOpen, document, onClose }: ExportDialogProps) {
+export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf')
   const { showToast } = useToast()
 
-  const handleExport = async () => {
+  const exportToPDF = async () => {
+    setIsExporting(true)
     try {
-      setIsExporting(true)
-      await exportDocument(document, selectedFormat)
-      showToast('success', 'Document exported', `Successfully exported "${document.title}" as ${selectedFormat.toUpperCase()}`)
-      onClose()
-    } catch (err) {
-      console.error('Error exporting document:', err)
-      showToast('error', 'Export failed', 'Failed to export document. Please try again.')
+      // Create a temporary div for rendering
+      const tempDiv = window.document.createElement('div')
+      tempDiv.className = 'pdf-export'
+      
+      // Add export styles
+      const styleSheet = window.document.createElement('style')
+      styleSheet.textContent = `
+        .pdf-export {
+          padding: 40px;
+          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .pdf-export h1 {
+          font-size: 24px;
+          font-weight: 600;
+          margin-bottom: 16px;
+          color: #111827;
+        }
+        .pdf-export h2 {
+          font-size: 20px;
+          font-weight: 600;
+          margin-bottom: 12px;
+          color: #1f2937;
+        }
+        .pdf-export h3 {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #374151;
+        }
+        .pdf-export p {
+          margin-bottom: 12px;
+          line-height: 1.6;
+          color: #374151;
+        }
+        .pdf-export ul, .pdf-export ol {
+          margin-bottom: 12px;
+          padding-left: 24px;
+        }
+        .pdf-export li {
+          margin-bottom: 4px;
+        }
+        .pdf-export strong {
+          font-weight: 600;
+          color: #111827;
+        }
+        .pdf-export em {
+          font-style: italic;
+        }
+      `
+      window.document.head.appendChild(styleSheet)
+
+      // Create root element for ReactMarkdown
+      const root = window.document.createElement('div')
+      root.className = 'pdf-content'
+      tempDiv.appendChild(root)
+      window.document.body.appendChild(tempDiv)
+
+      // Render Markdown content
+      const ReactDOMServer = (await import('react-dom/server')).default
+      const markdownContent = (
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+        >
+          {documentData.content}
+        </ReactMarkdown>
+      )
+      root.innerHTML = ReactDOMServer.renderToString(markdownContent)
+
+      // Configure PDF options
+      const opt = {
+        margin: [15, 15],
+        filename: `${documentData.title}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait'
+        }
+      }
+
+      // Generate PDF
+      await html2pdf().set(opt).from(tempDiv).save()
+
+      // Cleanup
+      window.document.body.removeChild(tempDiv)
+      window.document.head.removeChild(styleSheet)
+      setIsOpen(false)
+    } catch (error) {
+      console.error('Error exporting to PDF:', error)
     } finally {
       setIsExporting(false)
     }
   }
 
+  const downloadAsMarkdown = () => {
+    const element = window.document.createElement('a')
+    const file = new Blob([documentData.content], { type: 'text/markdown' })
+    element.href = URL.createObjectURL(file)
+    element.download = `${documentData.title}.md`
+    window.document.body.appendChild(element)
+    element.click()
+    window.document.body.removeChild(element)
+    setIsOpen(false)
+  }
+
+  const handleExport = async () => {
+    if (selectedFormat === 'pdf') {
+      await exportToPDF()
+    } else if (selectedFormat === 'markdown') {
+      downloadAsMarkdown()
+    } else {
+      try {
+        setIsExporting(true)
+        await exportDocument(documentData, selectedFormat)
+        showToast('success', 'Document exported', `Successfully exported "${documentData.title}" as ${selectedFormat.toUpperCase()}`)
+        setIsOpen(false)
+      } catch (err) {
+        console.error('Error exporting document:', err)
+        showToast('error', 'Export failed', 'Failed to export document. Please try again.')
+      } finally {
+        setIsExporting(false)
+      }
+    }
+  }
+
   return (
     <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={onClose}>
+      <Dialog as="div" className="relative z-10" onClose={() => setIsOpen(false)}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -63,7 +185,7 @@ export function ExportDialog({ isOpen, document, onClose }: ExportDialogProps) {
                   <button
                     type="button"
                     className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    onClick={onClose}
+                    onClick={() => setIsOpen(false)}
                   >
                     <span className="sr-only">Close</span>
                     <XMarkIcon className="h-6 w-6" aria-hidden="true" />
@@ -71,7 +193,7 @@ export function ExportDialog({ isOpen, document, onClose }: ExportDialogProps) {
                 </div>
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <ArrowDownTrayIcon className="h-6 w-6 text-indigo-600" aria-hidden="true" />
+                    <DocumentArrowDownIcon className="h-6 w-6 text-indigo-600" aria-hidden="true" />
                   </div>
                   <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                     <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
@@ -79,7 +201,7 @@ export function ExportDialog({ isOpen, document, onClose }: ExportDialogProps) {
                     </Dialog.Title>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        Choose a format to export "{document.title}".
+                        Choose a format to export "{documentData.title}".
                       </p>
                     </div>
                   </div>
@@ -113,7 +235,7 @@ export function ExportDialog({ isOpen, document, onClose }: ExportDialogProps) {
                     <button
                       type="button"
                       className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                      onClick={onClose}
+                      onClick={() => setIsOpen(false)}
                     >
                       Cancel
                     </button>
