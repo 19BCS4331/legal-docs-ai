@@ -1,0 +1,7 @@
+#TODO
+
+1. Fix the stats on top of documents page not refreshing after deleting a document
+
+2. Fix shared document view
+
+3. Fix not being able to share documents with email id other than yours

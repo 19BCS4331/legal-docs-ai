@@ -25,6 +25,7 @@ export default function DocumentGenerator({
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
   const router = useRouter()
 
   const supabase = createBrowserClient(
@@ -45,13 +46,11 @@ export default function DocumentGenerator({
 
     setIsGenerating(true)
     setError(null)
+    setProgress(0)
 
     try {
-      // Replace template variables with actual values
-      let prompt = selectedTemplate.prompt_template
-      Object.keys(data).forEach((key) => {
-        prompt = prompt.replace(`{${key}}`, data[key])
-      })
+      // Set initial progress
+      setProgress(10)
 
       // First, verify credits and get user's plan
       const verifyResponse = await fetch('/api/generate-document/verify', {
@@ -63,6 +62,9 @@ export default function DocumentGenerator({
           templateId: selectedTemplate.id,
         }),
       })
+
+      // Credits verified
+      setProgress(20)
 
       if (!verifyResponse.ok) {
         const errorData = await verifyResponse.json().catch(() => null)
@@ -82,6 +84,9 @@ export default function DocumentGenerator({
           model = 'gemini-2.0-flash'
       }
 
+      // Model selected
+      setProgress(30)
+
       console.log(`Starting document generation - User Plan: ${userPlan}, Model: ${model}`)
 
       if (typeof window === 'undefined') {
@@ -94,90 +99,95 @@ export default function DocumentGenerator({
       }
 
       setError('Initializing AI model... You may need to authorize access (one-time only)')
+      setProgress(40)
 
       // Enhance prompt to request Markdown formatting
-      const formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${prompt}`
+      const formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${selectedTemplate.prompt_template.replace(`{${Object.keys(data).join('}}{')}}`, Object.values(data).join(''))}`
 
       // Log the prompt being sent
       console.log('Sending prompt to Puter.js:', formattedPrompt)
+      setProgress(50)
 
-      // Call Puter.js chat API with streaming for pro/enterprise users
       const isStreaming = userPlan === 'pro' || userPlan === 'enterprise'
       console.log(`Using ${isStreaming ? 'streaming' : 'non-streaming'} mode for ${model}`)
 
+      // Call Puter.js chat API
+      const response = await puter.ai.chat(formattedPrompt, {
+        model,
+        stream: isStreaming,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a legal document assistant. Generate clear, professional, and legally sound documents based on the provided information.',
+          },
+          {
+            role: 'user',
+            content: formattedPrompt,
+          },
+        ],
+      })
+
+      // Request sent
+      setProgress(60)
+
+      // Log the response object
+      console.log('Puter.js response:', response)
+
       let content: string = ''
 
-      try {
-        const response = await puter.ai.chat(formattedPrompt, {
-          model,
-          stream: isStreaming,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a legal document assistant. Generate clear, professional, and legally sound documents based on the provided information.',
-            },
-            {
-              role: 'user',
-              content: formattedPrompt,
-            },
-          ],
-        })
-
-        // Log the response object
-        console.log('Puter.js response:', response)
-
-        if (isStreaming && response && typeof response[Symbol.asyncIterator] === 'function') {
-          // Handle streaming response (Claude)
-          let fullText = ''
-          for await (const part of response) {
-            console.log('Stream part:', part)
-            if (part?.text) {
-              fullText += part.text
-            }
-          }
-          content = fullText
-        } else {
-          // Handle non-streaming response (Gemini)
-          if (response && typeof response === 'object') {
-            if ('text' in response) {
-              // Claude format
-              content = response.text
-            } else if ('message' in response && response.message?.content) {
-              // Gemini format
-              content = response.message.content
-            } else if ('candidates' in response && Array.isArray(response.candidates) && response.candidates.length > 0) {
-              // Alternative Gemini format
-              const candidate = response.candidates[0]
-              if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
-                content = candidate.content.parts.map(part => part.text || '').join('\n')
-              }
-            } else if ('choices' in response && Array.isArray(response.choices) && response.choices.length > 0) {
-              // Fallback format
-              content = response.choices[0].text || response.choices[0].message?.content
-            }
+      if (isStreaming && response && typeof response[Symbol.asyncIterator] === 'function') {
+        // Handle streaming response (Claude)
+        let fullText = ''
+        let tokenCount = 0
+        const expectedTokens = 1000 // Approximate expected tokens
+        
+        for await (const part of response) {
+          console.log('Stream part:', part)
+          if (part?.text) {
+            fullText += part.text
+            tokenCount += part.text.split(/\s+/).length
+            const newProgress = Math.min(60 + Math.round((tokenCount / expectedTokens) * 40), 95)
+            setProgress(newProgress)
           }
         }
-
-        if (!content) {
-          console.error('Empty or invalid response from Puter.js:', JSON.stringify(response, null, 2))
-          throw new Error('Failed to get content from AI model. Please try again.')
+        content = fullText
+      } else {
+        // Handle non-streaming response (Gemini)
+        setProgress(70) // Processing response
+        if (response && typeof response === 'object') {
+          if ('text' in response) {
+            // Claude format
+            content = response.text
+          } else if ('message' in response && response.message?.content) {
+            // Gemini format
+            setProgress(80)
+            content = response.message.content
+          } else if ('candidates' in response && Array.isArray(response.candidates) && response.candidates.length > 0) {
+            // Alternative Gemini format
+            setProgress(80)
+            const candidate = response.candidates[0]
+            if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+              content = candidate.content.parts.map(part => part.text || '').join('\n')
+            }
+          } else if ('choices' in response && Array.isArray(response.choices) && response.choices.length > 0) {
+            // Fallback format
+            setProgress(80)
+            content = response.choices[0].text || response.choices[0].message?.content
+          }
+          setProgress(90)
         }
-
-        console.log('Successfully generated document with Puter.js')
-        console.log('Content length:', content.length)
-        console.log('Content preview:', content.substring(0, 100))
-        setError(null)
-
-      } catch (error: any) {
-        console.error('Puter.js error:', error)
-        console.log('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-          response: error.response
-        })
-        throw new Error(error.message || 'Failed to generate document. Please try again.')
       }
+
+      if (!content) {
+        console.error('Empty or invalid response from Puter.js:', JSON.stringify(response, null, 2))
+        throw new Error('Failed to get content from AI model. Please try again.')
+      }
+
+      console.log('Successfully generated document with Puter.js')
+      console.log('Content length:', content.length)
+      console.log('Content preview:', content.substring(0, 100))
+      setError(null)
+      setProgress(95)
 
       // Log final generation details
       console.log('Document Generation Summary:', {
@@ -207,6 +217,8 @@ export default function DocumentGenerator({
       })
 
       if (saveError) throw saveError
+
+      setProgress(100)
 
       // Redirect to documents page
       router.push('/documents')
@@ -268,21 +280,16 @@ export default function DocumentGenerator({
           </div>
 
           {/* Template Form */}
-          <div className="col-span-2 p-6">
-            {selectedTemplate ? (
+          {selectedTemplate && (
+            <div className="col-span-2 p-6">
               <TemplateForm
                 template={selectedTemplate}
                 onSubmit={onSubmit}
                 isGenerating={isGenerating}
+                progress={progress}
               />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <p className="text-center text-gray-500">
-                  Select a template from the left to get started
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </MotionDiv>
