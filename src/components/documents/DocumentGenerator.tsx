@@ -71,145 +71,118 @@ export default function DocumentGenerator({
 
       const { userPlan } = await verifyResponse.json()
 
-      // Generate document using Puter.js for pro/enterprise, fallback to API for free
-      let content: string
-      let modelUsed: string
-      let usedPuter: boolean = false
+      // Select model based on user plan
+      let model: string
+      switch (userPlan) {
+        case 'enterprise':
+        case 'pro':
+          model = 'claude-3-5-sonnet'
+          break
+        default:
+          model = 'gemini-2.0-flash'
+      }
 
-      console.log(`Starting document generation - User Plan: ${userPlan}`)
+      console.log(`Starting document generation - User Plan: ${userPlan}, Model: ${model}`)
 
-      if ((userPlan === 'pro' || userPlan === 'enterprise') && typeof window !== 'undefined' && (window as any).puter) {
-        const puter = (window as any).puter
-        const model = 'claude-3-5-sonnet'
-        modelUsed = model
-        usedPuter = true
+      if (typeof window === 'undefined') {
+        throw new Error('Document generation is only available in the browser')
+      }
 
-        console.log(`Using Puter.js with model: ${model}`)
+      const puter = (window as any).puter
+      if (!puter) {
+        throw new Error('Puter.js is not initialized')
+      }
 
-        try {
-          setError('Initializing AI model... You may need to authorize access (one-time only)')
+      setError('Initializing AI model... You may need to authorize access (one-time only)')
 
-          // Enhance prompt to request Markdown formatting
-          const formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${prompt}`
+      // Enhance prompt to request Markdown formatting
+      const formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${prompt}`
 
-          // Log the prompt being sent
-          console.log('Sending prompt to Puter.js:', formattedPrompt)
+      // Log the prompt being sent
+      console.log('Sending prompt to Puter.js:', formattedPrompt)
 
-          // Call Puter.js chat API with streaming
-          const response = await puter.ai.chat(formattedPrompt, {
-            model,
-            stream: true,
-          })
+      // Call Puter.js chat API with streaming for pro/enterprise users
+      const isStreaming = userPlan === 'pro' || userPlan === 'enterprise'
+      console.log(`Using ${isStreaming ? 'streaming' : 'non-streaming'} mode for ${model}`)
 
-          // Log the response object
-          console.log('Puter.js response:', response)
+      let content: string = ''
 
-          // Handle streaming response
-          let fullText = ''
-          try {
-            if (response && typeof response[Symbol.asyncIterator] === 'function') {
-              for await (const part of response) {
-                console.log('Stream part:', part)
-                if (part?.text) {
-                  fullText += part.text
-                }
-              }
-            } else {
-              throw new Error('Response is not a valid stream')
-            }
-          } catch (streamError) {
-            console.error('Streaming error:', streamError)
-            throw streamError
-          }
-
-          // Set the content
-          content = fullText
-
-          if (!content) {
-            console.error('Empty content from Puter.js')
-            throw new Error('Empty content received from Puter.js')
-          }
-
-          console.log('Successfully generated document with Puter.js')
-          console.log('Content length:', content.length)
-          console.log('Content preview:', content.substring(0, 100))
-          setError(null)
-        } catch (error: any) {
-          console.error('Puter.js error:', error)
-          console.log('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-          })
-          console.log('Falling back to OpenAI API')
-          usedPuter = false
-
-          // Fallback to OpenAI API
-          const response = await fetch('/api/generate-document', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+      try {
+        const response = await puter.ai.chat(formattedPrompt, {
+          model,
+          stream: isStreaming,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a legal document assistant. Generate clear, professional, and legally sound documents based on the provided information.',
             },
-            body: JSON.stringify({
-              prompt,
-              templateId: selectedTemplate.id,
-              inputData: data,
-            }),
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => null)
-            throw new Error(errorData?.message || 'Failed to generate document')
-          }
-
-          const result = await response.json()
-          content = result.content
-          modelUsed = result.model
-
-          if (!content) {
-            throw new Error('Empty content received from OpenAI API')
-          }
-        }
-      } else {
-        // Log why we're falling back
-        if (userPlan === 'free') {
-          console.log('Using OpenAI API (Free plan user)')
-        } else if (typeof window === 'undefined') {
-          console.log('Using OpenAI API (Window object not available)')
-        } else if (!(window as any).puter) {
-          console.log('Using OpenAI API (Puter.js not loaded)')
-        }
-
-        // Fallback to OpenAI API
-        const response = await fetch('/api/generate-document', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt,
-            templateId: selectedTemplate.id,
-            inputData: data,
-          }),
+            {
+              role: 'user',
+              content: formattedPrompt,
+            },
+          ],
         })
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null)
-          throw new Error(errorData?.message || 'Failed to generate document')
+        // Log the response object
+        console.log('Puter.js response:', response)
+
+        if (isStreaming && response && typeof response[Symbol.asyncIterator] === 'function') {
+          // Handle streaming response (Claude)
+          let fullText = ''
+          for await (const part of response) {
+            console.log('Stream part:', part)
+            if (part?.text) {
+              fullText += part.text
+            }
+          }
+          content = fullText
+        } else {
+          // Handle non-streaming response (Gemini)
+          if (response && typeof response === 'object') {
+            if ('text' in response) {
+              // Claude format
+              content = response.text
+            } else if ('message' in response && response.message?.content) {
+              // Gemini format
+              content = response.message.content
+            } else if ('candidates' in response && Array.isArray(response.candidates) && response.candidates.length > 0) {
+              // Alternative Gemini format
+              const candidate = response.candidates[0]
+              if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+                content = candidate.content.parts.map(part => part.text || '').join('\n')
+              }
+            } else if ('choices' in response && Array.isArray(response.choices) && response.choices.length > 0) {
+              // Fallback format
+              content = response.choices[0].text || response.choices[0].message?.content
+            }
+          }
         }
 
-        const result = await response.json()
-        content = result.content
-        modelUsed = result.model
-        usedPuter = false
-        console.log(`Successfully generated document with OpenAI API using model: ${result.model}`)
+        if (!content) {
+          console.error('Empty or invalid response from Puter.js:', JSON.stringify(response, null, 2))
+          throw new Error('Failed to get content from AI model. Please try again.')
+        }
+
+        console.log('Successfully generated document with Puter.js')
+        console.log('Content length:', content.length)
+        console.log('Content preview:', content.substring(0, 100))
+        setError(null)
+
+      } catch (error: any) {
+        console.error('Puter.js error:', error)
+        console.log('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          response: error.response
+        })
+        throw new Error(error.message || 'Failed to generate document. Please try again.')
       }
 
       // Log final generation details
       console.log('Document Generation Summary:', {
         userPlan,
-        modelUsed,
-        usedPuter,
+        model,
         contentLength: content.length,
         timestamp: new Date().toISOString()
       })
@@ -238,6 +211,7 @@ export default function DocumentGenerator({
       // Redirect to documents page
       router.push('/documents')
     } catch (err: any) {
+      console.error('Generation error:', err)
       setError(err.message || 'An error occurred while generating the document')
     } finally {
       setIsGenerating(false)
