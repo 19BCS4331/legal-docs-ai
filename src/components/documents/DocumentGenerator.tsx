@@ -38,6 +38,7 @@ export default function DocumentGenerator({
 
   const [writingTone, setWritingTone] = useState<'formal' | 'simple' | 'industry-specific'>('formal')
   const [customClauses, setCustomClauses] = useState<string[]>([])
+  const [jurisdiction, setJurisdiction] = useState<string>('')
   const [isProUser] = useState(userPlan === 'pro' || userPlan === 'enterprise')
 
   const onSubmit = async (data: any) => {
@@ -118,6 +119,11 @@ export default function DocumentGenerator({
 
       formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc. Also make sure to add proper signature fields:\n\n${formattedPrompt}`
 
+      // Add specific instructions for jurisdiction compliance
+      if (jurisdiction) {
+        formattedPrompt += `\n\nImportant: Ensure compliance with ${jurisdiction} laws and regulations. Include any specific legal requirements or disclaimers required by ${jurisdiction} law.`
+      }
+
       // Log the prompt being sent
       console.log('Sending prompt to Puter.js:', formattedPrompt)
       setProgress(50)
@@ -129,8 +135,10 @@ export default function DocumentGenerator({
       const systemMessage = isProUser 
         ? `You are a legal document assistant with advanced capabilities. Generate clear, professional, and legally sound documents based on the provided information.
            Writing Tone: ${writingTone}
+           ${jurisdiction ? `Jurisdiction: ${jurisdiction} - Ensure compliance with local laws and regulations.` : ''}
            ${customClauses.length > 0 ? `\nRequired Clauses: ${customClauses.join(', ')}` : ''}
-           Ensure the document follows proper legal structure while maintaining the specified tone.`
+           Ensure the document follows proper legal structure while maintaining the specified tone.
+           ${jurisdiction ? `\nImportant: Include any specific legal requirements or disclaimers required by ${jurisdiction} law.` : ''}`
         : 'You are a legal document assistant. Generate clear, professional, and legally sound documents based on the provided information.'
 
       // Call Puter.js chat API
@@ -305,8 +313,10 @@ export default function DocumentGenerator({
                     <ProDocumentSettings
                       onToneChange={setWritingTone}
                       onClausesChange={setCustomClauses}
+                      onJurisdictionChange={setJurisdiction}
                       defaultTone="formal"
                       defaultClauses={[]}
+                      defaultJurisdiction=""
                     />
                   </div>
                 )}
