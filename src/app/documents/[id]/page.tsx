@@ -107,11 +107,8 @@ export default async function DocumentPage(props: PageProps) {
     template: data.template && data.template.length > 0 ? {
       id: data.template[0].id,
       name: data.template[0].name,
-      description: data.template[0].description,
-      content: '', // Add default values for required Template fields
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    } : undefined
+      description: data.template[0].description
+    } as Template : undefined
   }
 
   console.log('Transformed document:', JSON.stringify(document, null, 2))
