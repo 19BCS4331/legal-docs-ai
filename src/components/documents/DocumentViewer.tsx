@@ -432,20 +432,7 @@ Format your response using this markdown structure:
             </div>
           )}
 
-          {/* Document Actions */}
-          <div className="mt-6 flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-            {/* Existing action buttons */}
-            <button
-              type="button"
-              onClick={() => setIsEditing(!isEditing)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <PencilIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-              {isEditing ? 'Cancel' : 'Edit'}
-            </button>
-            
-            {/* Other existing buttons */}
-          </div>
+          
 
           {/* Document Analysis for Pro Users */}
           {isProUser && (
