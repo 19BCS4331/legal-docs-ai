@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Document, DocumentVersion } from '@/types'
-import { DocumentTextIcon, PencilIcon, CheckIcon, XMarkIcon, ShareIcon, ArrowDownTrayIcon, TagIcon } from '@heroicons/react/24/outline'
+import { DocumentTextIcon, PencilIcon, CheckIcon, XMarkIcon, ShareIcon, ArrowDownTrayIcon, TagIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { marked } from 'marked'
 import { format } from 'date-fns'
 import { createBrowserClient } from '@supabase/ssr'
@@ -17,6 +17,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { DocumentAnalysis } from './DocumentAnalysis'
 import { DocumentSignature } from './DocumentSignature'
+import { CollaboratorDialog } from './CollaboratorDialog'
+import { ActiveUsersIndicator } from './ActiveUsersIndicator'
+import { useDocumentCollaboration } from '@/hooks/useDocumentCollaboration'
 
 interface DocumentViewerProps {
   document: Document
@@ -47,6 +50,7 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [isTagsDialogOpen, setIsTagsDialogOpen] = useState(false)
+  const [isCollaboratorDialogOpen, setIsCollaboratorDialogOpen] = useState(false)
 
   // New states for analysis features
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -426,6 +430,28 @@ Format your response using this markdown structure:
     )
   }
 
+  // Track cursor position for collaboration
+  const handleMouseCursorChange = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    if (userPlan !== 'enterprise') return
+    const textarea = e.currentTarget
+    updateCursorPosition(textarea.selectionStart)
+  }
+
+  const handleKeyboardCursorChange = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (userPlan !== 'enterprise') return
+    const textarea = e.currentTarget
+    updateCursorPosition(textarea.selectionStart)
+  }
+
+  // Initialize collaboration hook
+  const {
+    collaborators,
+    activeUsers,
+    addCollaborator,
+    removeCollaborator,
+    updateCursorPosition,
+  } = useDocumentCollaboration(document.id, document.user_id)
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="bg-white shadow sm:rounded-lg">
@@ -467,6 +493,16 @@ Format your response using this markdown structure:
                     <TagIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
                     Tags
                   </button>
+                  {userPlan === 'enterprise' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCollaboratorDialogOpen(true)}
+                      className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                    >
+                      <UserGroupIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
+                      Collaborators
+                    </button>
+                  )}
                 </>
               ) : (
                 <div className="flex items-center gap-2">
@@ -509,9 +545,11 @@ Format your response using this markdown structure:
             {isEditing ? (
               <textarea
                 rows={20}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
+                onMouseUp={handleMouseCursorChange}
+                onKeyUp={handleKeyboardCursorChange}
               />
             ) : (
               renderContent()
@@ -546,6 +584,16 @@ Format your response using this markdown structure:
             </div>
           )}
 
+          {/* Active Users Indicator for Enterprise Users */}
+          {userPlan === 'enterprise' && (
+            <div className="mt-6">
+              <ActiveUsersIndicator 
+                activeUsers={activeUsers} 
+                onClick={() => setIsCollaboratorDialogOpen(true)}
+              />
+            </div>
+          )}
+
           {!isEditing && !isLoadingVersions && (
             <DocumentVersionHistory
               versions={versions}
@@ -575,6 +623,15 @@ Format your response using this markdown structure:
         documentId={document.id}
         onClose={() => setIsTagsDialogOpen(false)}
         onTagsChange={loadDocument}
+      />
+
+      <CollaboratorDialog
+        isOpen={isCollaboratorDialogOpen}
+        onClose={() => setIsCollaboratorDialogOpen(false)}
+        collaborators={collaborators}
+        onAddCollaborator={addCollaborator}
+        onRemoveCollaborator={removeCollaborator}
+        isEnterpriseUser={userPlan === 'enterprise'}
       />
     </div>
   )

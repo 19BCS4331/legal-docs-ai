@@ -36,6 +36,58 @@ export interface DocumentTag {
   tag: Tag
 }
 
+export interface DocumentCollaborator {
+  id: string
+  document_id: string
+  user_id: string
+  role: 'viewer' | 'editor' | 'owner'
+  created_at: string
+  updated_at: string
+  added_by: string | null
+  user?: {
+    id: string
+    email: string
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
+export interface DocumentComment {
+  id: string
+  document_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  parent_id: string | null
+  resolved: boolean
+  resolved_at: string | null
+  resolved_by: string | null
+  position_start: number | null
+  position_end: number | null
+  user?: {
+    id: string
+    email: string
+    full_name?: string
+    avatar_url?: string
+  }
+  replies?: DocumentComment[]
+}
+
+export interface DocumentPresence {
+  id: string
+  document_id: string
+  user_id: string
+  last_seen_at: string
+  cursor_position: number | null
+  user?: {
+    id: string
+    email: string
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
 export interface Document {
   id: string
   title: string
@@ -56,6 +108,9 @@ export interface Document {
     jurisdiction?: string
     [key: string]: any
   }
+  collaborators?: DocumentCollaborator[]
+  comments?: DocumentComment[]
+  active_users?: DocumentPresence[]
 }
 
 export interface DocumentVersion {
