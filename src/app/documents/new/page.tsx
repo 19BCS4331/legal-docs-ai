@@ -80,6 +80,7 @@ export default async function NewDocumentPage() {
             hasCredits={(credits?.amount || 0) > 0}
             credits={credits?.amount || 0}
             userId={session.user.id}
+            userPlan={subscription?.plan_type}
           />
         </div>
       </div>

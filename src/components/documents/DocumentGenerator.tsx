@@ -7,6 +7,7 @@ import { Template } from '@/types'
 import { TemplateSelector } from './TemplateSelector'
 import { TemplateForm } from './TemplateForm'
 import { CreditBadge } from './CreditBadge'
+import { ProDocumentSettings } from './ProDocumentSettings'
 import { MotionDiv, fadeIn } from '@/components/shared/animations'
 
 interface DocumentGeneratorProps {
@@ -14,6 +15,7 @@ interface DocumentGeneratorProps {
   hasCredits: boolean
   credits: number
   userId: string
+  userPlan?: 'free' | 'pro' | 'enterprise'
 }
 
 export default function DocumentGenerator({
@@ -21,6 +23,7 @@ export default function DocumentGenerator({
   hasCredits,
   credits,
   userId,
+  userPlan,
 }: DocumentGeneratorProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -32,6 +35,10 @@ export default function DocumentGenerator({
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+
+  const [writingTone, setWritingTone] = useState<'formal' | 'simple' | 'industry-specific'>('formal')
+  const [customClauses, setCustomClauses] = useState<string[]>([])
+  const [isProUser] = useState(userPlan === 'pro' || userPlan === 'enterprise')
 
   const onSubmit = async (data: any) => {
     if (!hasCredits) {
@@ -118,6 +125,14 @@ export default function DocumentGenerator({
       const isStreaming = userPlan === 'pro' || userPlan === 'enterprise'
       console.log(`Using ${isStreaming ? 'streaming' : 'non-streaming'} mode for ${model}`)
 
+      // Enhanced system message for pro users
+      const systemMessage = isProUser 
+        ? `You are a legal document assistant with advanced capabilities. Generate clear, professional, and legally sound documents based on the provided information.
+           Writing Tone: ${writingTone}
+           ${customClauses.length > 0 ? `\nRequired Clauses: ${customClauses.join(', ')}` : ''}
+           Ensure the document follows proper legal structure while maintaining the specified tone.`
+        : 'You are a legal document assistant. Generate clear, professional, and legally sound documents based on the provided information.'
+
       // Call Puter.js chat API
       const response = await puter.ai.chat(formattedPrompt, {
         model,
@@ -125,7 +140,7 @@ export default function DocumentGenerator({
         messages: [
           {
             role: 'system',
-            content: 'You are a legal document assistant. Generate clear, professional, and legally sound documents based on the provided information.',
+            content: systemMessage,
           },
           {
             role: 'user',
@@ -272,31 +287,39 @@ export default function DocumentGenerator({
       <div className="rounded-lg border border-gray-200 bg-white shadow">
         <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-3">
           {/* Template Selection */}
-          <div className="border-b border-gray-200 p-6 lg:border-b-0 lg:border-r">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">Choose Template</h2>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
-              Select a template that best fits your needs
-            </p>
-            <div className="mt-6">
-              <TemplateSelector
-                templates={templates}
-                onSelect={setSelectedTemplate}
-                selectedTemplate={selectedTemplate}
-              />
-            </div>
+          <div className="px-4 py-6 sm:px-6 lg:border-r lg:border-gray-200">
+            <TemplateSelector
+              templates={templates}
+              selectedTemplate={selectedTemplate}
+              onSelect={setSelectedTemplate}
+            />
           </div>
 
           {/* Template Form */}
-          {selectedTemplate && (
-            <div className="col-span-2 p-6">
-              <TemplateForm
-                template={selectedTemplate}
-                onSubmit={onSubmit}
-                isGenerating={isGenerating}
-                progress={progress}
-              />
-            </div>
-          )}
+          <div className="col-span-2 px-4 py-6 sm:px-6">
+            {selectedTemplate && (
+              <>
+                {/* Pro Settings for pro/enterprise users */}
+                {isProUser && (
+                  <div className="mb-6">
+                    <ProDocumentSettings
+                      onToneChange={setWritingTone}
+                      onClausesChange={setCustomClauses}
+                      defaultTone="formal"
+                      defaultClauses={[]}
+                    />
+                  </div>
+                )}
+                
+                <TemplateForm
+                  template={selectedTemplate}
+                  onSubmit={onSubmit}
+                  isGenerating={isGenerating}
+                  progress={progress}
+                />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </MotionDiv>
