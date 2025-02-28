@@ -109,7 +109,7 @@ export default function DocumentGenerator({
         formattedPrompt = formattedPrompt.replace(`{${key}}`, value as string)
       })
 
-      formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${formattedPrompt}`
+      formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc. Also make sure to add proper signature fields:\n\n${formattedPrompt}`
 
       // Log the prompt being sent
       console.log('Sending prompt to Puter.js:', formattedPrompt)
