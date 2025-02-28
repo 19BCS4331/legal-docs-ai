@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import { Document, Template } from '@/types'
 
@@ -16,9 +17,7 @@ type DocumentWithTemplate = Omit<Document, 'template'> & {
 export default async function DocumentPage(props: PageProps) {
   const cookieStore = await cookies()
   const { id } = 'then' in props.params ? await props.params : props.params
-
-  console.log('Fetching document with ID:', id)
-
+  
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -30,6 +29,29 @@ export default async function DocumentPage(props: PageProps) {
       },
     }
   )
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    redirect('/auth')
+  }
+  
+  const { data: subscription } = session ? await supabase
+  .from('subscriptions')
+  .select('*')
+  .eq('user_id', session.user.id)
+  .eq('status', 'active')
+  .order('subscription_end_date', { ascending: false })
+  .limit(1)
+  .single() : { data: null }
+
+
+
+  console.log('Fetching document with ID:', id)
+
+  
 
   const {
     data: { user },
@@ -96,7 +118,7 @@ export default async function DocumentPage(props: PageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <DocumentViewer document={document} />
+      <DocumentViewer document={document} userPlan={subscription?.plan_type}/>
     </div>
   )
 }

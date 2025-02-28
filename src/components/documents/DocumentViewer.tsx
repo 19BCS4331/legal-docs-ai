@@ -15,9 +15,11 @@ import { useToast } from '../shared/Toast'
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { DocumentAnalysis } from './DocumentAnalysis'
 
 interface DocumentViewerProps {
   document: Document
+  userPlan?: 'free' | 'pro' | 'enterprise'
 }
 
 function getStatusColor(status: Document['status']) {
@@ -32,7 +34,7 @@ function getStatusColor(status: Document['status']) {
   }
 }
 
-export default function DocumentViewer({ document: initialDocument }: DocumentViewerProps) {
+export default function DocumentViewer({ document: initialDocument, userPlan = 'free' }: DocumentViewerProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [document, setDocument] = useState(initialDocument)
   const [editContent, setEditContent] = useState(document.content)
@@ -44,8 +46,13 @@ export default function DocumentViewer({ document: initialDocument }: DocumentVi
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [isTagsDialogOpen, setIsTagsDialogOpen] = useState(false)
-  const router = useRouter()
-  const { showToast } = useToast()
+
+  // New states for analysis features
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [risks, setRisks] = useState<{ severity: 'high' | 'medium' | 'low'; description: string; suggestion: string }[]>([])
+  const [summary, setSummary] = useState<string | null>(null)
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+  const [isProUser] = useState(userPlan === 'pro' || userPlan === 'enterprise')
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -178,6 +185,148 @@ export default function DocumentViewer({ document: initialDocument }: DocumentVi
     }
   }
 
+  const analyzeRisks = async () => {
+    setIsAnalyzing(true)
+    setError(null)
+    
+    try {
+      const puter = (window as any).puter
+      if (!puter) throw new Error('Puter.js is not initialized')
+
+      const response = await puter.ai.chat([
+       
+        {
+          role: 'system',
+          content: `You are a legal risk analysis expert. Analyze the given legal document and identify potential risks, ambiguities, or areas that need improvement. For each issue found, provide:
+1. A severity level (high/medium/low)
+2. A clear description of the risk
+3. A specific suggestion for improvement
+
+Format your response as a valid JSON array of objects with this exact structure:
+[
+  {
+    "severity": "high|medium|low",
+    "description": "Clear description of the risk",
+    "suggestion": "Specific suggestion to address the risk"
+  }
+]`
+        },
+        {
+          role: 'user',
+          content: `Analyze this legal document for potential risks and provide suggestions:\n\n${document.content}`
+        }
+      ])
+
+      try {
+        console.log('Full response:', response)
+        
+        // Extract the JSON content from the response
+        const content = response?.message?.content || ''
+        console.log('Extracted content:', content)
+        
+        // Remove markdown code block syntax if present
+        const jsonStr = content.replace(/```json\n|\n```/g, '').trim()
+        console.log('Cleaned JSON string:', jsonStr)
+        
+        // Parse the cleaned JSON string
+        const risksData = JSON.parse(jsonStr)
+        console.log('Parsed risks data:', risksData)
+        
+        if (Array.isArray(risksData) && risksData.length > 0) {
+          setRisks(risksData)
+        } else {
+          throw new Error('Invalid risks data format')
+        }
+      } catch (e) {
+        console.error('Failed to parse risks data:', e)
+        setError('Failed to analyze risks. The AI response was not in the expected format. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error analyzing risks:', error)
+      setError('Failed to analyze risks. Please try again.')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const generateSummary = async () => {
+    setIsGeneratingSummary(true)
+    setError(null)
+    
+    try {
+      const puter = (window as any).puter
+      if (!puter) throw new Error('Puter.js is not initialized')
+
+      const response = await puter.ai.chat([
+        {
+          role: 'system',
+          content: `You are an expert at simplifying legal documents. Create a clear, concise summary of the legal document using proper markdown formatting. Focus on the key points and obligations while avoiding legal jargon.
+
+Format your response using this markdown structure:
+# Document Summary
+
+## Key Information
+- Type of Document
+- Parties Involved
+- Date and Duration
+
+## Main Purpose
+[Brief explanation of the document's primary purpose]
+
+## Key Terms and Conditions
+- [Important point 1]
+- [Important point 2]
+- [etc.]
+
+## Obligations and Responsibilities
+### Party A (First Party)
+- [Obligation 1]
+- [Obligation 2]
+
+### Party B (Second Party)
+- [Obligation 1]
+- [Obligation 2]
+
+## Important Dates and Deadlines
+- [List any critical dates]
+
+## Additional Notes
+[Any other important information]`
+        },
+        {
+          role: 'user',
+          content: `Please create a simple, easy-to-understand summary of this legal document:\n\n${document.content}`
+        }
+      ])
+
+      try {
+        // Debug logging
+        console.log('Full summary response:', response)
+        
+        // Extract the content from the response
+        const content = response?.message?.content || ''
+        console.log('Summary content:', content)
+
+        if (content) {
+          setSummary(content)
+        } else {
+          throw new Error('Empty summary response')
+        }
+      } catch (e) {
+        console.error('Failed to generate summary:', e)
+        setError('Failed to generate summary. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error generating summary:', error)
+      setError('Failed to generate summary. Please try again.')
+    } finally {
+      setIsGeneratingSummary(false)
+    }
+  }
+
+  const router = useRouter()
+  const { showToast } = useToast()
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="bg-white shadow sm:rounded-lg">
@@ -280,6 +429,36 @@ export default function DocumentViewer({ document: initialDocument }: DocumentVi
                   </ReactMarkdown>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Document Actions */}
+          <div className="mt-6 flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
+            {/* Existing action buttons */}
+            <button
+              type="button"
+              onClick={() => setIsEditing(!isEditing)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <PencilIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+              {isEditing ? 'Cancel' : 'Edit'}
+            </button>
+            
+            {/* Other existing buttons */}
+          </div>
+
+          {/* Document Analysis for Pro Users */}
+          {isProUser && (
+            <div className="mt-6">
+              <DocumentAnalysis
+                documentContent={document.content}
+                onAnalyze={analyzeRisks}
+                isAnalyzing={isAnalyzing}
+                risks={risks}
+                summary={summary}
+                isGeneratingSummary={isGeneratingSummary}
+                onGenerateSummary={generateSummary}
+              />
             </div>
           )}
 
