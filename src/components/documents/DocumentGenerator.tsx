@@ -102,7 +102,14 @@ export default function DocumentGenerator({
       setProgress(40)
 
       // Enhance prompt to request Markdown formatting
-      const formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${selectedTemplate.prompt_template.replace(`{${Object.keys(data).join('}}{')}}`, Object.values(data).join(''))}`
+      let formattedPrompt = selectedTemplate.prompt_template
+      
+      // Replace each placeholder with its corresponding value
+      Object.entries(data).forEach(([key, value]) => {
+        formattedPrompt = formattedPrompt.replace(`{${key}}`, value as string)
+      })
+
+      formattedPrompt = `Please generate the following document using Markdown formatting. Use # for main titles, ## for subtitles, and standard Markdown syntax for emphasis, lists, etc.:\n\n${formattedPrompt}`
 
       // Log the prompt being sent
       console.log('Sending prompt to Puter.js:', formattedPrompt)
