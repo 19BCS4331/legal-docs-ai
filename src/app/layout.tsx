@@ -29,7 +29,7 @@ export default function RootLayout({
       <head>
         <Script 
           src="https://js.puter.com/v2/" 
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
       </head>
       <body className={`${jakarta.className} h-full antialiased`}>

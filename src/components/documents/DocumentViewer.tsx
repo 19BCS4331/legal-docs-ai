@@ -381,6 +381,51 @@ Format your response using this markdown structure:
   const router = useRouter()
   const { showToast } = useToast()
 
+  const renderContent = () => {
+    return (
+      <div className="prose max-w-none">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {editContent}
+        </ReactMarkdown>
+
+        {/* Signatures section */}
+        {Object.keys(signatures).length > 0 && (
+          <div className="mt-8 border-t pt-8">
+            <h2 className="text-2xl font-bold mb-6">Signatures</h2>
+            
+            {/* Creator signature */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4">Document Creator</h3>
+              {signatures.creator ? (
+                <img 
+                  src={signatures.creator} 
+                  alt="Creator Signature" 
+                  className="max-h-20 object-contain border-b border-gray-200 pb-2"
+                />
+              ) : (
+                <p className="text-gray-500 italic">Signature Required</p>
+              )}
+            </div>
+
+            {/* Signer signature */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4">Document Signer</h3>
+              {signatures.signer ? (
+                <img 
+                  src={signatures.signer} 
+                  alt="Signer Signature" 
+                  className="max-h-20 object-contain border-b border-gray-200 pb-2"
+                />
+              ) : (
+                <p className="text-gray-500 italic">Signature Required</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="bg-white shadow sm:rounded-lg">
@@ -459,32 +504,19 @@ Format your response using this markdown structure:
             </div>
           )}
 
-          {isEditing ? (
-            <div className="mt-8">
+          {/* Document Content */}
+          <div className="mt-4 bg-white px-4 py-5 sm:p-6">
+            {isEditing ? (
               <textarea
+                rows={20}
+                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full min-h-[500px] p-4 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                placeholder="Enter your document content..."
               />
-              <div className="mt-2 text-sm text-gray-500">
-                Use Markdown for formatting. Preview will be shown after saving.
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
-              <div className="px-4 py-6 sm:p-8">
-                <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    className="prose prose-slate prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-a:text-blue-600 hover:prose-a:text-blue-500"
-                  >
-                    {document.content}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            </div>
-          )}
+            ) : (
+              renderContent()
+            )}
+          </div>
 
           
 
