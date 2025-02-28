@@ -40,14 +40,22 @@ export interface Document {
   id: string
   title: string
   content: string
+  created_at: string
+  updated_at: string
   user_id: string
   template_id: string | null
   input_data: Record<string, any>
   status: 'draft' | 'generated' | 'completed'
-  created_at: string
-  updated_at: string
   template?: Template
   tags?: Tag[]
+  versions?: DocumentVersion[]
+  signatures?: { [key: string]: string }
+  metadata?: {
+    type?: string
+    status?: string
+    jurisdiction?: string
+    [key: string]: any
+  }
 }
 
 export interface DocumentVersion {

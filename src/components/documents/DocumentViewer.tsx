@@ -16,6 +16,7 @@ import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { DocumentAnalysis } from './DocumentAnalysis'
+import { DocumentSignature } from './DocumentSignature'
 
 interface DocumentViewerProps {
   document: Document
@@ -53,6 +54,8 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
   const [summary, setSummary] = useState<string | null>(null)
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [isProUser] = useState(userPlan === 'pro' || userPlan === 'enterprise')
+  const [signatures, setSignatures] = useState<{ [key: string]: string }>(document.signatures || {})
+  const [jurisdiction, setJurisdiction] = useState(document.metadata?.jurisdiction || '')
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,6 +88,34 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
     }
   }
 
+  // Load document data on mount
+  useEffect(() => {
+    const loadDocument = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', document.id)
+          .single()
+
+        if (error) throw error
+
+        if (data) {
+          setEditContent(data.content || '')
+          setSignatures(data.signatures || {})
+          if (data.metadata?.jurisdiction) {
+            setJurisdiction(data.metadata.jurisdiction)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading document:', error)
+        showToast('error', 'Error loading document', 'Failed to load document data.')
+      }
+    }
+
+    loadDocument()
+  }, [document.id])
+
   const handleSave = async () => {
     try {
       setIsSaving(true)
@@ -95,6 +126,7 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
         .from('documents')
         .update({
           content: editContent,
+          signatures,
           updated_at: new Date().toISOString(),
           status: document.status === 'draft' ? document.status : 'completed'
         })
@@ -324,6 +356,28 @@ Format your response using this markdown structure:
     }
   }
 
+  const handleSignatureAdd = async (signature: string, position: string) => {
+    try {
+      // Update signatures in the document
+      const updatedSignatures = { ...signatures, [position]: signature }
+      setSignatures(updatedSignatures)
+
+      // Save to database
+      const { error } = await supabase
+        .from('documents')
+        .update({ signatures: updatedSignatures })
+        .eq('id', document.id)
+
+      if (error) throw error
+
+     
+      showToast('success', 'Signature added successfully', 'Your changes have been saved successfully.')
+    } catch (error) {
+      console.error('Error adding signature:', error)
+      showToast('error', 'error adding signature', 'Failed to save changes.')
+    }
+  }
+
   const router = useRouter()
   const { showToast } = useToast()
 
@@ -445,6 +499,17 @@ Format your response using this markdown structure:
                 summary={summary}
                 isGeneratingSummary={isGeneratingSummary}
                 onGenerateSummary={generateSummary}
+              />
+            </div>
+          )}
+
+          {/* Document Signatures for Pro Users */}
+          {isProUser && (
+            <div className="mt-6">
+              <DocumentSignature
+                onSignatureAdd={handleSignatureAdd}
+                signatures={signatures}
+                userRole="creator"
               />
             </div>
           )}
