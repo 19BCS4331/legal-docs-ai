@@ -31,6 +31,7 @@ function classNames(...classes: string[]) {
 export function SideNav() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [credits, setCredits] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
@@ -202,14 +203,11 @@ export function SideNav() {
                           Profile
                         </button>
                         <button
-                          onClick={handleSignOut}
-                          className="group -mx-2 flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
+                          onClick={() => setIsSignOutOpen(true)}
+                          className="-mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50"
                         >
-                          <ArrowLeftOnRectangleIcon
-                            className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
-                            aria-hidden="true"
-                          />
-                          Sign out
+                          <ArrowLeftOnRectangleIcon className="h-6 w-6 text-gray-400" aria-hidden="true" />
+                          Sign Out
                         </button>
                       </li>
                     </ul>
@@ -275,7 +273,7 @@ export function SideNav() {
                     Profile
                   </button>
                   <button
-                    onClick={handleSignOut}
+                    onClick={() => setIsSignOutOpen(true)}
                     className="group flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
                   >
                     <ArrowLeftOnRectangleIcon
@@ -307,6 +305,74 @@ export function SideNav() {
           </Link>
         </div>
       </div>
+
+      {/* Sign Out Confirmation Modal */}
+      <Transition.Root show={isSignOutOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={setIsSignOutOpen}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 z-10 overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              >
+                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                  <div>
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                      <ArrowLeftOnRectangleIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
+                    </div>
+                    <div className="mt-3 text-center sm:mt-5">
+                      <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
+                        Sign Out Confirmation
+                      </Dialog.Title>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">
+                          Are you sure you want to sign out? You will need to sign in again to access your documents.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                    <button
+                      type="button"
+                      className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 sm:col-start-2"
+                      onClick={() => {
+                        setIsSignOutOpen(false);
+                        handleSignOut();
+                      }}
+                    >
+                      Sign Out
+                    </button>
+                    <button
+                      type="button"
+                      className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                      onClick={() => setIsSignOutOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition.Root>
 
       <ProfileModal
         isOpen={isProfileOpen}
