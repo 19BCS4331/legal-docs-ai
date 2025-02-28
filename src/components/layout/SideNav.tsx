@@ -43,8 +43,22 @@ export function SideNav() {
   );
 
   const handleSignOut = async () => {
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all cookies
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+    
+    // Sign out from Supabase
     await supabase.auth.signOut();
-    window.location.href = "/";
+    
+    // Hard redirect to auth page
+    window.location.href = '/auth';
   };
 
   const handleProfileClick = async () => {
