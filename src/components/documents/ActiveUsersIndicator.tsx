@@ -5,46 +5,45 @@ import { UserGroupIcon } from '@heroicons/react/24/outline'
 import { Tooltip } from '@/components/shared/Tooltip'
 
 interface ActiveUsersIndicatorProps {
-  activeUsers: DocumentPresence[]
-  onClick?: () => void
+  users?: DocumentPresence[];
 }
 
-export function ActiveUsersIndicator({ activeUsers, onClick }: ActiveUsersIndicatorProps) {
-  if (!activeUsers.length) return null
+export function ActiveUsersIndicator({ users = [] }: ActiveUsersIndicatorProps) {
+  if (!users?.length) return null
+
+  const displayedUsers = users.slice(0, 3);
+  const remainingCount = Math.max(0, users.length - 3);
 
   return (
     <div 
-      className={`flex items-center gap-1 ${onClick ? 'cursor-pointer' : ''}`}
-      onClick={onClick}
+      className={`flex items-center gap-1`}
     >
       <div className="flex -space-x-2">
-        {activeUsers.slice(0, 3).map((presence) => (
+        {displayedUsers.map((presence) => (
           <Tooltip 
             key={presence.id} 
-            content={presence.user?.email || 'Unknown user'}
+            content={presence.user?.full_name || presence.user?.email || 'Unknown user'}
           >
-            {presence.user?.avatar_url ? (
-              <img
-                className="relative z-10 inline-block h-8 w-8 rounded-full ring-2 ring-white"
-                src={presence.user.avatar_url}
-                alt={presence.user?.email || 'User avatar'}
-              />
-            ) : (
-              <span className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500 ring-2 ring-white">
-                <span className="text-sm font-medium leading-none text-white">
-                  {(presence.user?.email?.[0] || '?').toUpperCase()}
-                </span>
-              </span>
-            )}
+            <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white">
+              {presence.user?.avatar_url ? (
+                <img
+                  className="h-full w-full rounded-full object-cover"
+                  src={presence.user.avatar_url}
+                  alt={presence.user?.full_name || presence.user?.email || 'User avatar'}
+                />
+              ) : (
+                <div className="h-full w-full rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-500">
+                  {(presence.user?.full_name || presence.user?.email || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
           </Tooltip>
         ))}
-        {activeUsers.length > 3 && (
-          <Tooltip content={`+${activeUsers.length - 3} more users`}>
-            <span className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 ring-2 ring-white">
-              <span className="text-xs font-medium leading-none text-gray-500">
-                +{activeUsers.length - 3}
-              </span>
-            </span>
+        {remainingCount > 0 && (
+          <Tooltip content={`${remainingCount} more active user${remainingCount === 1 ? '' : 's'}`}>
+            <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 ring-2 ring-white">
+              <span className="text-xs font-medium text-gray-500">+{remainingCount}</span>
+            </div>
           </Tooltip>
         )}
       </div>

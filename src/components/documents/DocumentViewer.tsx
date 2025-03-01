@@ -20,6 +20,7 @@ import { DocumentSignature } from './DocumentSignature'
 import { CollaboratorDialog } from './CollaboratorDialog'
 import { ActiveUsersIndicator } from './ActiveUsersIndicator'
 import { useDocumentCollaboration } from '@/hooks/useDocumentCollaboration'
+import CommentsPanel from './CommentsPanel'
 
 interface DocumentViewerProps {
   document: Document
@@ -446,10 +447,15 @@ Format your response using this markdown structure:
   // Initialize collaboration hook
   const {
     collaborators,
+    comments,
     activeUsers,
-    addCollaborator,
-    removeCollaborator,
     updateCursorPosition,
+    addComment,
+    updateComment,
+    resolveComment,
+    deleteComment,
+    addCollaborator,
+    removeCollaborator
   } = useDocumentCollaboration(document.id, document.user_id)
 
   return (
@@ -540,23 +546,60 @@ Format your response using this markdown structure:
             </div>
           )}
 
-          {/* Document Content */}
-          <div className="mt-4 bg-white px-4 py-5 sm:p-6">
-            {isEditing ? (
-              <textarea
-                rows={20}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                onMouseUp={handleMouseCursorChange}
-                onKeyUp={handleKeyboardCursorChange}
+          {/* Main content area with document and comments */}
+          <div className="mt-6 flex flex-col lg:flex-row gap-8">
+            {/* Document content */}
+            <div className="flex-1">
+              <div className="rounded-md border border-gray-200">
+                {isEditing ? (
+                  <textarea
+                    rows={20}
+                    className="block w-full rounded-md border-0 py-1.5 px-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    onMouseUp={handleMouseCursorChange}
+                    onKeyUp={handleKeyboardCursorChange}
+                  />
+                ) : (
+                  <div className="prose max-w-none p-4">
+                    {renderContent()}
+                  </div>
+                )}
+              </div>
+
+              
+            </div>
+
+            {/* Comments panel */}
+            <div className="lg:w-96">
+              <CommentsPanel
+                comments={comments}
+                onAddComment={addComment}
+                onUpdateComment={updateComment}
+                onResolveComment={resolveComment}
+                onDeleteComment={deleteComment}
+                userPlan={userPlan}
               />
-            ) : (
-              renderContent()
-            )}
+            </div>
           </div>
 
-          
+          {/* Collaboration section */}
+          {userPlan === 'enterprise' && (
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setIsCollaboratorDialogOpen(true)}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <UserGroupIcon className="h-4 w-4 mr-2" />
+                  Manage Collaborators
+                </button>
+                {activeUsers && activeUsers.length > 0 && (
+                  <ActiveUsersIndicator users={activeUsers} />
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Document Analysis for Pro Users */}
           {isProUser && (
@@ -587,10 +630,9 @@ Format your response using this markdown structure:
           {/* Active Users Indicator for Enterprise Users */}
           {userPlan === 'enterprise' && (
             <div className="mt-6">
-              <ActiveUsersIndicator 
-                activeUsers={activeUsers} 
-                onClick={() => setIsCollaboratorDialogOpen(true)}
-              />
+              {activeUsers && activeUsers.length > 0 && (
+                <ActiveUsersIndicator users={activeUsers} />
+              )}
             </div>
           )}
 

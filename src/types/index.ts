@@ -53,24 +53,29 @@ export interface DocumentCollaborator {
 }
 
 export interface DocumentComment {
-  id: string
-  document_id: string
-  user_id: string
-  content: string
-  created_at: string
-  updated_at: string
-  parent_id: string | null
-  resolved: boolean
-  resolved_at: string | null
-  resolved_by: string | null
-  position_start: number | null
-  position_end: number | null
+  id: string;
+  document_id: string;
+  user_id: string;
   user?: {
-    id: string
-    email: string
-    full_name?: string
-    avatar_url?: string
-  }
+    id: string;
+    email: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+  content: string;
+  created_at: string;
+  updated_at: string;
+  parent_id?: string;
+  resolved: boolean;
+  resolved_at?: string;
+  resolved_by?: {
+    id: string;
+    email: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+  position_start?: number;
+  position_end?: number;
   replies?: DocumentComment[]
 }
 
