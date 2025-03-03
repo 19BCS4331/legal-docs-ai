@@ -5,25 +5,28 @@ import { Menu, Transition } from '@headlessui/react'
 import { FunnelIcon, ChevronDownIcon } from '@heroicons/react/20/solid'
 import { CheckIcon } from '@heroicons/react/24/outline'
 
+export type SortOption = 'updated_desc' | 'updated_asc' | 'name_asc' | 'name_desc'
+export type StatusFilter = 'all' | 'draft' | 'in_review' | 'completed'
+
 const sortOptions = [
-  { name: 'Most Recent', value: 'updated_desc' },
-  { name: 'Oldest', value: 'updated_asc' },
-  { name: 'Name (A-Z)', value: 'name_asc' },
-  { name: 'Name (Z-A)', value: 'name_desc' },
+  { name: 'Most Recent', value: 'updated_desc' as const },
+  { name: 'Oldest', value: 'updated_asc' as const },
+  { name: 'Name (A-Z)', value: 'name_asc' as const },
+  { name: 'Name (Z-A)', value: 'name_desc' as const },
 ]
 
 const statusFilters = [
-  { name: 'All', value: 'all' },
-  { name: 'Draft', value: 'draft' },
-  { name: 'In Review', value: 'in_review' },
-  { name: 'Completed', value: 'completed' },
+  { name: 'All', value: 'all' as const },
+  { name: 'Draft', value: 'draft' as const },
+  { name: 'In Review', value: 'in_review' as const },
+  { name: 'Completed', value: 'completed' as const },
 ]
 
 type DocumentFiltersProps = {
-  onSortChange: (value: string) => void
-  onStatusChange: (value: string) => void
-  currentSort: string
-  currentStatus: string
+  onSortChange: (value: SortOption) => void
+  onStatusChange: (value: StatusFilter) => void
+  currentSort: SortOption
+  currentStatus: StatusFilter
 }
 
 export function DocumentFilters({ onSortChange, onStatusChange, currentSort, currentStatus }: DocumentFiltersProps) {

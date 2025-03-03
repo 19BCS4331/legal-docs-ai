@@ -2,13 +2,10 @@
 
 import { useState } from 'react'
 import { DocumentList } from './DocumentList'
-import { DocumentFilters } from './DocumentFilters'
+import { DocumentFilters, SortOption, StatusFilter } from './DocumentFilters'
 import { Document } from '@/types'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import debounce from 'lodash/debounce'
-
-type SortOption = 'updated_desc' | 'updated_asc' | 'name_asc' | 'name_desc'
-type StatusFilter = 'all' | 'draft' | 'in_review' | 'completed'
 
 type DocumentSectionProps = {
   title: string
