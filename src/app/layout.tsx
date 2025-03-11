@@ -26,12 +26,6 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="h-full bg-gray-50">
-      <head>
-        <Script 
-          src="https://js.puter.com/v2/" 
-          strategy="afterInteractive"
-        />
-      </head>
       <body className={`${jakarta.className} h-full antialiased`}>
         <ToastProvider>
           {isProtectedRoute ? (

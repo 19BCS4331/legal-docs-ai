@@ -41,7 +41,7 @@ export default async function DocumentsPage() {
   // Get owned documents
   const { data: ownedDocs, error: ownedError } = await supabase
     .from('documents')
-    .select('*, template:document_templates(id, name, description)')
+    .select('*')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
 
@@ -49,7 +49,21 @@ export default async function DocumentsPage() {
     console.error('Error fetching owned documents:', ownedError)
   }
 
-  // Get shared documents
+  // Get templates for owned docs
+  let ownedDocsWithTemplates = []
+  if (ownedDocs?.length) {
+    const { data: templates } = await supabase
+      .from('document_templates')
+      .select('id, name, description')
+      .in('id', ownedDocs.map(d => d.template_id))
+
+    ownedDocsWithTemplates = ownedDocs.map(doc => ({
+      ...doc,
+      template: templates?.find(t => t.id === doc.template_id) || null
+    }))
+  }
+
+  // Get collaborations
   const { data: collaborations, error: collabError } = await supabase
     .from('document_collaborators')
     .select('document_id, role')
@@ -59,35 +73,37 @@ export default async function DocumentsPage() {
     console.error('Error fetching collaborations:', collabError)
   }
 
-  // Get the actual shared documents
-  const sharedDocs: DocumentWithTemplate[] = []
-  if (collaborations && collaborations.length > 0) {
+  // Get shared documents
+  let sharedDocs = []
+  if (collaborations?.length) {
     const { data: docs, error: sharedError } = await supabase
       .from('documents')
-      .select('*, template:document_templates(id, name, description)')
+      .select('*')
       .in('id', collaborations.map(c => c.document_id))
       .order('updated_at', { ascending: false })
 
     if (sharedError) {
       console.error('Error fetching shared documents:', sharedError)
     } else if (docs) {
-      // Map the roles back to the documents
-      docs.forEach(doc => {
-        const collab = collaborations.find(c => c.document_id === doc.id)
-        if (collab) {
-          sharedDocs.push({
-            ...doc,
-            role: collab.role
-          })
-        }
-      })
+      // Get templates for shared docs
+      const { data: templates } = await supabase
+        .from('document_templates')
+        .select('id, name, description')
+        .in('id', docs.map(d => d.template_id))
+
+      // Combine docs with templates and roles
+      sharedDocs = docs.map(doc => ({
+        ...doc,
+        template: templates?.find(t => t.id === doc.template_id) || null,
+        role: collaborations.find(c => c.document_id === doc.id)?.role || 'viewer'
+      }))
     }
   }
 
   // For debugging
-  console.log('Owned docs count:', ownedDocs?.length || 0)
+  console.log('Owned docs count:', ownedDocsWithTemplates.length)
   console.log('Shared docs count:', sharedDocs.length)
-  console.log('Sample owned doc:', ownedDocs?.[0])
+  console.log('Sample owned doc:', ownedDocsWithTemplates[0])
   console.log('Sample shared doc:', sharedDocs[0])
 
   return (
@@ -109,7 +125,7 @@ export default async function DocumentsPage() {
                 <p className="ml-16 truncate text-sm font-medium text-indigo-900/70">Total Documents</p>
               </dt>
               <dd className="ml-16 flex flex-col gap-1">
-                <p className="text-3xl font-bold tracking-tight text-indigo-900">{(ownedDocs?.length || 0) + sharedDocs.length}</p>
+                <p className="text-3xl font-bold tracking-tight text-indigo-900">{ownedDocsWithTemplates.length + sharedDocs.length}</p>
                 <p className="text-sm text-indigo-900/60">Documents in your workspace</p>
               </dd>
             </div>
@@ -124,7 +140,7 @@ export default async function DocumentsPage() {
                 <p className="ml-16 truncate text-sm font-medium text-blue-900/70">My Documents</p>
               </dt>
               <dd className="ml-16 flex flex-col gap-1">
-                <p className="text-3xl font-bold tracking-tight text-blue-900">{ownedDocs?.length || 0}</p>
+                <p className="text-3xl font-bold tracking-tight text-blue-900">{ownedDocsWithTemplates.length}</p>
                 <p className="text-sm text-blue-900/60">Documents you own</p>
               </dd>
             </div>
@@ -150,7 +166,7 @@ export default async function DocumentsPage() {
             <DocumentSection
               title="My Documents"
               description="Documents you've created and own"
-              documents={ownedDocs || []}
+              documents={ownedDocsWithTemplates}
               userId={user.id}
             />
 

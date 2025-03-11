@@ -9,6 +9,8 @@ interface CommentsPanelProps {
   onResolveComment: (commentId: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
   userPlan: string;
+  canComment: boolean;
+  userId: string;
 }
 
 export default function CommentsPanel({
@@ -17,13 +19,20 @@ export default function CommentsPanel({
   onUpdateComment,
   onResolveComment,
   onDeleteComment,
-  userPlan
+  userPlan,
+  canComment,
+  userId
 }: CommentsPanelProps) {
   const [newCommentContent, setNewCommentContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
 
   const handleAddComment = async (e: React.FormEvent) => {
+    if (!canComment) {
+      alert('Permission denied: You do not have permission to add comments.');
+      return;
+    }
+
     e.preventDefault();
     if (!newCommentContent.trim()) return;
 
@@ -66,24 +75,26 @@ export default function CommentsPanel({
     <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
       <div className="p-4">
         <h3 className="text-lg font-medium text-gray-900">Comments</h3>
-        <form onSubmit={handleAddComment} className="mt-4">
-          <textarea
-            value={newCommentContent}
-            onChange={(e) => setNewCommentContent(e.target.value)}
-            placeholder="Add a comment..."
-            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-            rows={3}
-          />
-          <div className="mt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={!newCommentContent.trim()}
-              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Add Comment
-            </button>
-          </div>
-        </form>
+        {canComment && (
+          <form onSubmit={handleAddComment} className="mt-4">
+            <textarea
+              value={newCommentContent}
+              onChange={(e) => setNewCommentContent(e.target.value)}
+              placeholder="Add a comment..."
+              className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              rows={3}
+            />
+            <div className="mt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={!newCommentContent.trim()}
+                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Comment
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       <div className="divide-y divide-gray-200">
@@ -108,7 +119,7 @@ export default function CommentsPanel({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {!comment.resolved && (
+                {!comment.resolved && (canComment || comment.user_id === userId) && (
                   <>
                     <button
                       onClick={() => startEditing(comment)}

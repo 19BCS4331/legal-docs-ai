@@ -9,9 +9,10 @@ interface CollaboratorDialogProps {
   isOpen: boolean
   onClose: () => void
   collaborators: DocumentCollaborator[]
-  onAddCollaborator: (email: string, role: DocumentCollaborator['role']) => Promise<void>
+  onAddCollaborator: (email: string, role: DocumentCollaborator['role'], userId: string) => Promise<void>
   onRemoveCollaborator: (id: string) => Promise<void>
-  isEnterpriseUser: boolean
+  isEnterpriseUser: boolean,
+  userId: string,
 }
 
 export function CollaboratorDialog({
@@ -20,7 +21,8 @@ export function CollaboratorDialog({
   collaborators,
   onAddCollaborator,
   onRemoveCollaborator,
-  isEnterpriseUser
+  isEnterpriseUser,
+  userId,
 }: CollaboratorDialogProps) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<DocumentCollaborator['role']>('viewer')
@@ -82,7 +84,7 @@ export function CollaboratorDialog({
     try {
       setIsSubmitting(true)
       setError(null)
-      await onAddCollaborator(email.trim(), role)
+      await onAddCollaborator(email.trim(), role,userId)
       setEmail('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add collaborator')

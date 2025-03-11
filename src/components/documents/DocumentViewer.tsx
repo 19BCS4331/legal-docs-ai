@@ -21,10 +21,14 @@ import { CollaboratorDialog } from './CollaboratorDialog'
 import { ActiveUsersIndicator } from './ActiveUsersIndicator'
 import { useDocumentCollaboration } from '@/hooks/useDocumentCollaboration'
 import CommentsPanel from './CommentsPanel'
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getMemoizedContent, saveMemoizedContent } from '@/utils/aiMemoization'
 
 interface DocumentViewerProps {
   document: Document
   userPlan?: 'free' | 'pro' | 'enterprise'
+  userRole: string
+  userId: string
 }
 
 function getStatusColor(status: Document['status']) {
@@ -39,7 +43,15 @@ function getStatusColor(status: Document['status']) {
   }
 }
 
-export default function DocumentViewer({ document: initialDocument, userPlan = 'free' }: DocumentViewerProps) {
+function canEditDocument(role: string) {
+  return ['owner', 'editor'].includes(role.toLowerCase())
+}
+
+function canComment(role: string) {
+  return ['owner', 'editor', 'commenter'].includes(role.toLowerCase())
+}
+
+export default function DocumentViewer({ document: initialDocument, userPlan = 'free', userRole, userId }: DocumentViewerProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [document, setDocument] = useState(initialDocument)
   const [editContent, setEditContent] = useState(document.content)
@@ -122,6 +134,11 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
   }, [document.id])
 
   const handleSave = async () => {
+    if (!canEditDocument(userRole)) {
+      showToast('error', 'Permission denied', 'You do not have permission to edit this document.')
+      return
+    }
+
     try {
       setIsSaving(true)
       setError(null)
@@ -164,7 +181,7 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
       showToast('success', 'Document saved', 'Your changes have been saved successfully.')
     } catch (err) {
       console.error('Error saving document:', err)
-      showToast('error', 'Error saving document', 'Your changes could not be saved. Please try again.')
+        showToast('error', 'Error saving document', 'Your changes could not be saved. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -177,6 +194,11 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
   }
 
   const handleRestoreVersion = async (version: DocumentVersion) => {
+    if (!canEditDocument(userRole)) {
+      setError('Permission denied')
+      return
+    }
+
     try {
       setIsSaving(true)
       setError(null)
@@ -200,7 +222,7 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
       router.refresh()
     } catch (err) {
       console.error('Error restoring version:', err)
-      setError('Failed to restore version. Please try again.')
+      setError('Error restoring version')
     } finally {
       setIsSaving(false)
     }
@@ -227,56 +249,63 @@ export default function DocumentViewer({ document: initialDocument, userPlan = '
     setError(null)
     
     try {
-      const puter = (window as any).puter
-      if (!puter) throw new Error('Puter.js is not initialized')
+      // Select model based on user plan
+      const model = isProUser ? 'gemini-2.0-flash' : 'gemini-1.5-flash'
 
-      const response = await puter.ai.chat([
-       
-        {
-          role: 'system',
-          content: `You are a legal risk analysis expert. Analyze the given legal document and identify potential risks, ambiguities, or areas that need improvement. For each issue found, provide:
-1. A severity level (high/medium/low)
-2. A clear description of the risk
-3. A specific suggestion for improvement
+      const prompt = `You are a legal risk analysis expert. Analyze the given legal document and identify potential risks, ambiguities, or areas that need improvement.
 
-Format your response as a valid JSON array of objects with this exact structure:
+Document to analyze:
+${document.content}
+
+Provide your analysis in the following JSON format:
 [
   {
     "severity": "high|medium|low",
     "description": "Clear description of the risk",
     "suggestion": "Specific suggestion to address the risk"
   }
-]`
-        },
-        {
-          role: 'user',
-          content: `Analyze this legal document for potential risks and provide suggestions:\n\n${document.content}`
-        }
-      ])
+]
 
-      try {
-        console.log('Full response:', response)
-        
-        // Extract the JSON content from the response
-        const content = response?.message?.content || ''
-        console.log('Extracted content:', content)
-        
-        // Remove markdown code block syntax if present
-        const jsonStr = content.replace(/```json\n|\n```/g, '').trim()
-        console.log('Cleaned JSON string:', jsonStr)
-        
-        // Parse the cleaned JSON string
-        const risksData = JSON.parse(jsonStr)
-        console.log('Parsed risks data:', risksData)
-        
+Ensure that:
+1. Each risk has a severity level (high/medium/low)
+2. Each description clearly explains the potential issue
+3. Each suggestion provides specific, actionable improvements
+4. The response is valid JSON that can be parsed`
+
+      // Check for memoized content first
+      const memoizedContent = await getMemoizedContent(prompt, model, 'risk_analysis', document.id)
+
+      if (memoizedContent) {
+        console.log('Using memoized risk analysis')
+        const risksData = JSON.parse(memoizedContent)
         if (Array.isArray(risksData) && risksData.length > 0) {
           setRisks(risksData)
-        } else {
-          throw new Error('Invalid risks data format')
+          return
         }
-      } catch (e) {
-        console.error('Failed to parse risks data:', e)
-        setError('Failed to analyze risks. The AI response was not in the expected format. Please try again.')
+      }
+
+      // If no valid memoized content, generate new analysis
+      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!)
+      const geminiModel = genAI.getGenerativeModel({ model })
+      const result = await geminiModel.generateContent(prompt)
+      const content = result.response.text()
+
+      console.log('Generated new risk analysis')
+
+      // Remove markdown code block syntax if present
+      const jsonStr = content.replace(/```json\n|\n```/g, '').trim()
+      console.log('Cleaned JSON string:', jsonStr)
+      
+      // Parse the cleaned JSON string
+      const risksData = JSON.parse(jsonStr)
+      console.log('Parsed risks data:', risksData)
+      
+      if (Array.isArray(risksData) && risksData.length > 0) {
+        setRisks(risksData)
+        // Save the result for future use
+        await saveMemoizedContent(jsonStr, prompt, model, 'risk_analysis', document.id)
+      } else {
+        throw new Error('Invalid risks data format')
       }
     } catch (error) {
       console.error('Error analyzing risks:', error)
@@ -291,13 +320,13 @@ Format your response as a valid JSON array of objects with this exact structure:
     setError(null)
     
     try {
-      const puter = (window as any).puter
-      if (!puter) throw new Error('Puter.js is not initialized')
+      // Select model based on user plan
+      const model = isProUser ? 'gemini-2.0-flash' : 'gemini-1.5-flash'
 
-      const response = await puter.ai.chat([
-        {
-          role: 'system',
-          content: `You are an expert at simplifying legal documents. Create a clear, concise summary of the legal document using proper markdown formatting. Focus on the key points and obligations while avoiding legal jargon.
+      const prompt = `You are an expert at simplifying legal documents. Create a clear, concise summary of the following legal document using proper markdown formatting. Focus on the key points and obligations while avoiding legal jargon.
+
+Document to summarize:
+${document.content}
 
 Format your response using this markdown structure:
 # Document Summary
@@ -329,30 +358,28 @@ Format your response using this markdown structure:
 
 ## Additional Notes
 [Any other important information]`
-        },
-        {
-          role: 'user',
-          content: `Please create a simple, easy-to-understand summary of this legal document:\n\n${document.content}`
-        }
-      ])
 
-      try {
-        // Debug logging
-        console.log('Full summary response:', response)
-        
-        // Extract the content from the response
-        const content = response?.message?.content || ''
-        console.log('Summary content:', content)
+      // Check for memoized content first
+      const memoizedContent = await getMemoizedContent(prompt, model, 'summary', document.id)
 
-        if (content) {
-          setSummary(content)
-        } else {
-          throw new Error('Empty summary response')
-        }
-      } catch (e) {
-        console.error('Failed to generate summary:', e)
-        setError('Failed to generate summary. Please try again.')
+      if (memoizedContent) {
+        console.log('Using memoized summary')
+        setSummary(memoizedContent)
+        return
       }
+
+      // If no valid memoized content, generate new summary
+      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!)
+      const geminiModel = genAI.getGenerativeModel({ model })
+      const result = await geminiModel.generateContent(prompt)
+      const content = result.response.text()
+
+      console.log('Generated new summary')
+      console.log('Full summary response:', content)
+
+      setSummary(content)
+      // Save the result for future use
+      await saveMemoizedContent(content, prompt, model, 'summary', document.id)
     } catch (error) {
       console.error('Error generating summary:', error)
       setError('Failed to generate summary. Please try again.')
@@ -456,7 +483,7 @@ Format your response using this markdown structure:
     deleteComment,
     addCollaborator,
     removeCollaborator
-  } = useDocumentCollaboration(document.id, document.user_id)
+  } = useDocumentCollaboration(document.id, userId)
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -467,14 +494,16 @@ Format your response using this markdown structure:
             <div className="flex items-center gap-2">
               {!isEditing ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                  >
-                    <PencilIcon className="h-5 w-5 mr-2" aria-hidden="true" />
-                    Edit
-                  </button>
+                  {canEditDocument(userRole) && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                    >
+                      <PencilIcon className="h-5 w-5 mr-2" aria-hidden="true" />
+                      Edit
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsShareDialogOpen(true)}
@@ -579,6 +608,8 @@ Format your response using this markdown structure:
                 onResolveComment={resolveComment}
                 onDeleteComment={deleteComment}
                 userPlan={userPlan}
+                canComment={canComment(userRole)}
+                userId={userId}
               />
             </div>
           </div>
@@ -674,6 +705,7 @@ Format your response using this markdown structure:
         onAddCollaborator={addCollaborator}
         onRemoveCollaborator={removeCollaborator}
         isEnterpriseUser={userPlan === 'enterprise'}
+        userId={userId}
       />
     </div>
   )

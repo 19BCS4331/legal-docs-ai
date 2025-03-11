@@ -39,19 +39,15 @@ export default async function DocumentPage(props: PageProps) {
   }
   
   const { data: subscription } = session ? await supabase
-  .from('subscriptions')
-  .select('*')
-  .eq('user_id', session.user.id)
-  .eq('status', 'active')
-  .order('subscription_end_date', { ascending: false })
-  .limit(1)
-  .single() : { data: null }
-
-
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('status', 'active')
+    .order('subscription_end_date', { ascending: false })
+    .limit(1)
+    .single() : { data: null }
 
   console.log('Fetching document with ID:', id)
-
-  
 
   const {
     data: { user },
@@ -64,7 +60,8 @@ export default async function DocumentPage(props: PageProps) {
 
   console.log('User ID:', user.id)
 
-  const { data, error } = await supabase
+  // First try to get document as owner
+  let { data, error } = await supabase
     .from('documents')
     .select(`
       id,
@@ -89,9 +86,52 @@ export default async function DocumentPage(props: PageProps) {
     .eq('user_id', user.id)
     .single() as { data: DocumentWithTemplate | null, error: any }
 
-  if (error) {
-    console.error('Error fetching document:', error)
-    notFound()
+  let userRole = 'owner'
+
+  // If not found as owner, check if shared with user
+  if (!data) {
+    const { data: sharedDoc, error: sharedError } = await supabase
+      .from('documents')
+      .select(`
+        id,
+        title,
+        content,
+        user_id,
+        status,
+        created_at,
+        updated_at,
+        template:document_templates(*),
+        tags:document_tags(
+          tag:tags(
+            id,
+            name,
+            color,
+            created_at,
+            user_id
+          )
+        ),
+        document_collaborators!inner(role)
+      `)
+      .eq('id', id)
+      .eq('document_collaborators.user_id', user.id)
+      .single() as { data: DocumentWithTemplate & { document_collaborators: Array<{ role: string }> } | null, error: any }
+
+    if (sharedError) {
+      console.error('Error fetching shared document:', sharedError)
+      notFound()
+    }
+
+    if (!sharedDoc) {
+      console.log('No document found with ID:', id)
+      notFound()
+    }
+
+    // Set the user's role from collaborators
+    userRole = sharedDoc.document_collaborators[0].role
+
+    // Remove the document_collaborators field before transforming
+    const { document_collaborators, ...docWithoutCollaborators } = sharedDoc
+    data = docWithoutCollaborators
   }
 
   if (!data) {
@@ -100,6 +140,7 @@ export default async function DocumentPage(props: PageProps) {
   }
 
   console.log('Document data:', JSON.stringify(data, null, 2))
+  console.log('User role:', userRole)
 
   // Transform the document data to match our Document type
   const document: Document = {
@@ -115,7 +156,12 @@ export default async function DocumentPage(props: PageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <DocumentViewer document={document} userPlan={subscription?.plan_type}/>
+      <DocumentViewer 
+        document={document} 
+        userPlan={subscription?.plan_type}
+        userRole={userRole}
+        userId={user.id}
+      />
     </div>
   )
 }

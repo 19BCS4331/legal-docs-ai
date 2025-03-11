@@ -3,7 +3,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { DocumentCollaborator, DocumentComment, DocumentPresence } from '@/types'
 import { useToast } from '@/components/shared/Toast'
 
-export function useDocumentCollaboration(documentId: string, userId: string) {
+export function useDocumentCollaboration(documentId: string, currentUserId: string) {
   const [collaborators, setCollaborators] = useState<DocumentCollaborator[]>([])
   const [comments, setComments] = useState<DocumentComment[]>([])
   const [activeUsers, setActiveUsers] = useState<DocumentPresence[]>([])
@@ -24,12 +24,12 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
         .from('document_presence')
         .select('id')
         .eq('document_id', documentId)
-        .eq('user_id', userId)
+        .eq('user_id', currentUserId)
         .single()
 
       const presenceData = {
         document_id: documentId,
-        user_id: userId,
+        user_id: currentUserId,
         last_seen_at: new Date().toISOString(),
         cursor_position: cursorPosition
       }
@@ -238,71 +238,67 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
       })
       .subscribe()
 
-    // Clean up old presence records periodically
-    const cleanupInterval = setInterval(async () => {
-      try {
-        await supabase
-          .from('document_presence')
-          .delete()
+    // Subscribe to collaborator changes
+    const collaboratorSubscription = supabase
+      .channel(`document_collaborators:${documentId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'document_collaborators',
+        filter: `document_id=eq.${documentId}`
+      }, async () => {
+        // Refresh collaborators
+        const { data } = await supabase
+          .from('document_collaborators')
+          .select(`
+            *,
+            profile:user_id (
+              id,
+              email,
+              full_name
+            )
+          `)
           .eq('document_id', documentId)
-          .lt('last_seen_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
-      } catch (err) {
-        console.error('Error cleaning up presence records:', err)
-      }
-    }, 60000) // Run every minute
 
-    // Update presence every 30 seconds
+        if (data) setCollaborators(data.map(c => ({
+          ...c,
+          user: c.profile ? {
+            id: c.profile.id,
+            email: c.profile.email,
+            full_name: c.profile.full_name
+          } : undefined
+        })))
+      })
+      .subscribe()
+
+    // Update presence every minute
     const presenceInterval = setInterval(() => {
       updatePresence()
-    }, 30000)
+    }, 60 * 1000)
 
+    // Cleanup subscriptions and interval
     return () => {
       presenceSubscription.unsubscribe()
       commentSubscription.unsubscribe()
+      collaboratorSubscription.unsubscribe()
       clearInterval(presenceInterval)
-      clearInterval(cleanupInterval)
-      
-      // Clean up our presence when unmounting
-      void (async () => {
-        try {
-          await supabase
-            .from('document_presence')
-            .delete()
-            .eq('document_id', documentId)
-            .eq('user_id', userId)
-        } catch (err) {
-          console.error('Error cleaning up presence:', err)
-        }
-      })()
     }
-  }, [documentId, userId])
+  }, [documentId])
 
-  // Helper functions for collaboration
+  // Function to update cursor position
   const updateCursorPosition = async (position: number) => {
-    try {
-      await supabase
-        .from('document_presence')
-        .upsert({
-          document_id: documentId,
-          user_id: userId,
-          last_seen_at: new Date().toISOString(),
-          cursor_position: position
-        })
-    } catch (err) {
-      console.error('Error updating cursor position:', err)
-    }
+    await updatePresence(position)
   }
 
-  const addComment = async (content: string, positionStart?: number, positionEnd?: number) => {
+  // Function to add a comment
+  const addComment = async (content: string) => {
     try {
       const { data, error } = await supabase
         .from('document_comments')
         .insert({
           document_id: documentId,
-          user_id: userId,
-          content,
-          position_start: positionStart,
-          position_end: positionEnd
+          user_id: currentUserId,
+          content
         })
         .select(`
           *,
@@ -316,15 +312,17 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
 
       if (error) throw error
 
-      setComments([...comments, {
+      const newComment = {
         ...data,
         user: data.profile ? {
           id: data.profile.id,
           email: data.profile.email,
           full_name: data.profile.full_name
         } : undefined
-      }])
-      showToast('success', 'Comment added successfully')
+      }
+
+      setComments([...comments, newComment])
+      return newComment
     } catch (err) {
       console.error('Error adding comment:', err)
       showToast('error', 'Failed to add comment')
@@ -332,6 +330,7 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
     }
   }
 
+  // Function to update a comment
   const updateComment = async (commentId: string, content: string) => {
     try {
       const { data, error } = await supabase
@@ -350,15 +349,19 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
 
       if (error) throw error
 
-      setComments(comments.map(c => c.id === commentId ? {
+      const updatedComment = {
         ...data,
         user: data.profile ? {
           id: data.profile.id,
           email: data.profile.email,
           full_name: data.profile.full_name
         } : undefined
-      } : c))
-      showToast('success', 'Comment updated successfully')
+      }
+
+      setComments(comments.map(c => 
+        c.id === commentId ? updatedComment : c
+      ))
+      return updatedComment
     } catch (err) {
       console.error('Error updating comment:', err)
       showToast('error', 'Failed to update comment')
@@ -366,19 +369,25 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
     }
   }
 
+  // Function to resolve a comment
   const resolveComment = async (commentId: string) => {
     try {
       const { data, error } = await supabase
         .from('document_comments')
         .update({
           resolved: true,
-          resolved_at: new Date().toISOString(),
-          resolved_by: userId
+          resolved_by: currentUserId,
+          resolved_at: new Date().toISOString()
         })
         .eq('id', commentId)
         .select(`
           *,
           profile:user_id (
+            id,
+            email,
+            full_name
+          ),
+          resolved_by:resolved_by (
             id,
             email,
             full_name
@@ -388,15 +397,24 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
 
       if (error) throw error
 
-      setComments(comments.map(c => c.id === commentId ? {
+      const resolvedComment = {
         ...data,
         user: data.profile ? {
           id: data.profile.id,
           email: data.profile.email,
           full_name: data.profile.full_name
+        } : undefined,
+        resolved_by: data.resolved_by ? {
+          id: data.resolved_by.id,
+          email: data.resolved_by.email,
+          full_name: data.resolved_by.full_name
         } : undefined
-      } : c))
-      showToast('success', 'Comment resolved successfully')
+      }
+
+      setComments(comments.map(c => 
+        c.id === commentId ? resolvedComment : c
+      ))
+      return resolvedComment
     } catch (err) {
       console.error('Error resolving comment:', err)
       showToast('error', 'Failed to resolve comment')
@@ -404,6 +422,7 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
     }
   }
 
+  // Function to delete a comment
   const deleteComment = async (commentId: string) => {
     try {
       const { error } = await supabase
@@ -414,7 +433,6 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
       if (error) throw error
 
       setComments(comments.filter(c => c.id !== commentId))
-      showToast('success', 'Comment deleted successfully')
     } catch (err) {
       console.error('Error deleting comment:', err)
       showToast('error', 'Failed to delete comment')
@@ -422,7 +440,7 @@ export function useDocumentCollaboration(documentId: string, userId: string) {
     }
   }
 
-  const addCollaborator = async (userEmail: string, role: DocumentCollaborator['role']) => {
+  const addCollaborator = async (userEmail: string, role: DocumentCollaborator['role'],userId: string) => {
     try {
       // First, get the user ID from the email
       const { data: userData, error: userError } = await supabase
