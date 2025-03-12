@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { createBrowserClient } from "@supabase/ssr";
 import { ProfileModal } from "@/components/profile/ProfileModal";
+import Image from "next/image";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
@@ -158,7 +159,14 @@ export function SideNav() {
                       href="/"
                       className="text-xl font-bold text-indigo-600"
                     >
-                      Legal Docs AI
+                      <Image
+              src="/images/website_logo_no_bg.png"
+              alt="Legal Docs AI"
+              width={150}
+              height={40}
+              className="text-indigo-600"
+              priority
+            />
                     </Link>
                   </div>
                   <nav className="flex flex-1 flex-col">
@@ -222,9 +230,16 @@ export function SideNav() {
       {/* Static sidebar for desktop */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
+          <div className="flex h-16 shrink-0 items-center self-center mt-5">
             <Link href="/" className="text-xl font-bold text-indigo-600">
-              Legal Docs AI
+            <Image
+              src="/images/website_logo_no_bg.png"
+              alt="Legal Docs AI"
+              width={120}
+              height={30}
+              className="text-indigo-600"
+              priority
+            />
             </Link>
           </div>
           <nav className="flex flex-1 flex-col">

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { Dialog } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { createBrowserClient } from '@supabase/ssr'
+import Image from 'next/image'
 
 const navigation = [
   { name: 'Features', href: '/features' },
@@ -42,7 +43,14 @@ export function TopNavbar() {
       <nav className="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
         <div className="flex lg:flex-1">
           <Link href="/" className="-m-1.5 p-1.5">
-            <span className="text-xl font-bold text-indigo-600">Legal Docs AI</span>
+            <Image
+              src="/images/website_logo_no_bg.png"
+              alt="Legal Docs AI"
+              width={150}
+              height={40}
+              className="text-indigo-600"
+              priority
+            />
           </Link>
         </div>
         <div className="flex lg:hidden">

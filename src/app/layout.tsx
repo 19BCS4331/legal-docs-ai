@@ -5,7 +5,6 @@ import { Plus_Jakarta_Sans } from 'next/font/google'
 import { ToastProvider } from '@/components/shared/Toast'
 import { usePathname } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import Script from 'next/script'
 
 const jakarta = Plus_Jakarta_Sans({ 
   subsets: ['latin'],

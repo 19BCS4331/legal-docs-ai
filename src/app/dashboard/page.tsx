@@ -40,10 +40,9 @@ export default async function DashboardPage() {
     redirect('/auth')
   }
 
-  const { data: documents } = (await supabase
+  const { data: documents } = await supabase
     .from('documents')
-    .select(
-      `
+    .select(`
       id,
       title,
       content,
@@ -58,10 +57,9 @@ export default async function DashboardPage() {
         name,
         description
       )
-    `
-    )
+    `)
     .eq('user_id', user.id)
-    .order('updated_at', { ascending: false })) as { data: DocumentWithTemplate[] | null }
+    .order('updated_at', { ascending: false }) as { data: DocumentWithTemplate[] | null }
 
   const { data: credits } = await supabase
     .from('credits')
