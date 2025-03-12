@@ -1,4 +1,5 @@
 import AuthForm from '@/components/auth/AuthForm'
+import Image from 'next/image'
 
 export default function AuthPage() {
   return (
@@ -8,14 +9,14 @@ export default function AuthPage() {
         <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
           <div className="mx-auto w-full max-w-sm lg:w-96">
             <div className="flex items-center justify-center">
-              {/* <Image
-                src="/logo.png"
-                alt="LegalDocs AI"
-                width={48}
-                height={48}
-                className="h-12 w-auto"
-              /> */}
-              <h1 className="text-3xl font-bold text-indigo-600">LegalDocs AI</h1>
+            <Image
+              src="/images/website_logo_no_bg.png"
+              alt="Legal Docs AI"
+              width={150}
+              height={40}
+              className="text-indigo-600"
+              priority
+            />
             </div>
             <div className="mt-8">
               <AuthForm />
