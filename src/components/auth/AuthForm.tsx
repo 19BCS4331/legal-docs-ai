@@ -69,12 +69,26 @@ export default function AuthForm() {
     }
   };
 
+  // const handleSocialLogin = async (provider: "google") => {
+  //   try {
+  //     const { error } = await supabase.auth.signInWithOAuth({
+  //       provider,
+  //       options: {
+  //         redirectTo: `${window.location.origin}/auth/callback`,
+  //       },
+  //     });
+  //     if (error) throw error;
+  //   } catch (error: Error | any) {
+  //     setError(error?.message || "An error occurred during social login");
+  //   }
+  // };
+
   const handleSocialLogin = async (provider: "google") => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${process.env.NODE_ENV === 'production' ? 'https://www.thelegaldocsai.com/auth/callback' : window.location.origin}/auth/callback`,
         },
       });
       if (error) throw error;
