@@ -1,14 +1,15 @@
 'use client'
 
-import React, { Fragment, useState } from 'react'
+import React, { Fragment, useState, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { Document } from '@/types'
 import { DocumentArrowDownIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { exportDocument, ExportFormat } from '@/utils/documentExport'
 import { useToast } from '../shared/Toast'
-import html2pdf from 'html2pdf.js'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+
+let html2pdf: any = null;
 
 interface ExportDialogProps {
   isOpen: boolean
@@ -21,14 +22,24 @@ export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogPr
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf')
   const { showToast } = useToast()
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('html2pdf.js').then(module => {
+        html2pdf = module.default;
+      });
+    }
+  }, []);
+
   const exportToPDF = async () => {
     setIsExporting(true)
     try {
-      // Create a temporary div for rendering
+      if (!html2pdf) {
+        html2pdf = (await import('html2pdf.js')).default;
+      }
+      
       const tempDiv = window.document.createElement('div')
       tempDiv.className = 'pdf-export'
       
-      // Add export styles
       const styleSheet = window.document.createElement('style')
       styleSheet.textContent = `
         .pdf-export {
@@ -75,13 +86,11 @@ export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogPr
       `
       window.document.head.appendChild(styleSheet)
 
-      // Create root element for ReactMarkdown
       const root = window.document.createElement('div')
       root.className = 'pdf-content'
       tempDiv.appendChild(root)
       window.document.body.appendChild(tempDiv)
 
-      // Render Markdown content
       const ReactDOMServer = (await import('react-dom/server')).default
       const markdownContent = (
         <ReactMarkdown
@@ -92,7 +101,6 @@ export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogPr
       )
       root.innerHTML = ReactDOMServer.renderToString(markdownContent)
 
-      // Configure PDF options
       const opt = {
         margin: [15, 15],
         filename: `${documentData.title}.pdf`,
@@ -109,10 +117,8 @@ export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogPr
         }
       }
 
-      // Generate PDF
       await html2pdf().set(opt).from(tempDiv).save()
 
-      // Cleanup
       window.document.body.removeChild(tempDiv)
       window.document.head.removeChild(styleSheet)
       setIsOpen(false)

@@ -150,3 +150,5 @@ export type PricingPlan = {
   documentsPerMonth: number;
   isPopular?: boolean;
 };
+
+export * from './transaction';

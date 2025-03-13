@@ -13,6 +13,7 @@ import {
   UserCircleIcon,
   ArrowLeftOnRectangleIcon,
   DocumentDuplicateIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { createBrowserClient } from "@supabase/ssr";
 import { ProfileModal } from "@/components/profile/ProfileModal";
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Documents", href: "/documents", icon: DocumentTextIcon },
   { name: "Templates", href: "/templates", icon: DocumentDuplicateIcon },
   { name: "Tags", href: "/tags", icon: TagIcon },
+  { name: "Transactions", href: "/dashboard/transactions", icon: CreditCardIcon },
 ];
 
 function classNames(...classes: string[]) {
