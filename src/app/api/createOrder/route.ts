@@ -16,12 +16,14 @@ const razorpay = new Razorpay({
 export type OrderBody = {
     amount: number;
     currency: string;
-    planId: string;
+    planId?: string;
+    receipt?: string;
+    notes?: Record<string, any>;
 };
 
 export async function POST(request: NextRequest) {
     try {
-        const { amount, currency, planId }: OrderBody = await request.json();
+        const { amount, currency, planId, receipt, notes }: OrderBody = await request.json();
         if (!amount) {
             return NextResponse.json({ message: `Amount is required` }, { status: 400 })
         }
@@ -29,16 +31,14 @@ export async function POST(request: NextRequest) {
         const options = {
             amount: amount * 100, // Convert to paise
             currency: currency || "INR",
-            receipt: `receipt_${planId}_${Date.now()}`,
-            notes: {
-                planId: planId
-            }
+            receipt: receipt || `receipt_${planId || 'credit'}_${Date.now()}`,
+            notes: notes || (planId ? { planId } : {})
         }
 
         const order = await razorpay.orders.create(options);
         console.log("Order Created Successfully:", order);
 
-        return NextResponse.json({ orderId: order.id }, { status: 200 })
+        return NextResponse.json({ id: order.id }, { status: 200 })
 
     } catch (error) {
         console.error("Error creating order:", error);

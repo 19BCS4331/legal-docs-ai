@@ -90,16 +90,18 @@ export default function AuthForm() {
   const handleForgotPassword = async (email: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       });
-      
+
       if (error) throw error;
       setResetEmailSent(true);
     } catch (error: Error | any) {
-      setError(error?.message || "An error occurred while sending the reset email");
+      setError(
+        error?.message || "An error occurred while sending the reset email"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +109,9 @@ export default function AuthForm() {
 
   // Listen for password reset event
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         router.push("/auth/reset-password");
       }
@@ -136,9 +140,12 @@ export default function AuthForm() {
               d="M5 13l4 4L19 7"
             />
           </svg>
-          <h3 className="mt-2 text-xl font-medium text-gray-900">Confirmation email sent!</h3>
+          <h3 className="mt-2 text-xl font-medium text-gray-900">
+            Confirmation email sent!
+          </h3>
           <p className="mt-2 text-sm text-gray-600">
-            We've sent a confirmation email to your inbox. Please check your email and click the link to verify your account.
+            We've sent a confirmation email to your inbox. Please check your
+            email and click the link to verify your account.
           </p>
           <div className="mt-6">
             <button
@@ -153,9 +160,12 @@ export default function AuthForm() {
       ) : isForgotPassword ? (
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Reset your password</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Reset your password
+            </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a link to reset your
+              password.
             </p>
           </div>
 
@@ -175,9 +185,12 @@ export default function AuthForm() {
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              <h3 className="mt-2 text-xl font-medium text-gray-900">Check your email</h3>
+              <h3 className="mt-2 text-xl font-medium text-gray-900">
+                Check your email
+              </h3>
               <p className="mt-2 text-sm text-gray-600">
-                We've sent a password reset link to your email address. Please check your inbox and follow the instructions.
+                We've sent a password reset link to your email address. Please
+                check your inbox and follow the instructions.
               </p>
             </div>
           ) : (
@@ -199,18 +212,23 @@ export default function AuthForm() {
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                      <h3 className="text-sm font-medium text-red-800">
+                        {error}
+                      </h3>
                     </div>
                   </div>
                 </div>
               )}
 
-              <form className="space-y-4" onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const email = formData.get('email') as string;
-                handleForgotPassword(email);
-              }}>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const email = formData.get("email") as string;
+                  handleForgotPassword(email);
+                }}
+              >
                 <div>
                   <label
                     htmlFor="email"
@@ -307,7 +325,9 @@ export default function AuthForm() {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 text-gray-500 bg-white">Or continue with</span>
+              <span className="px-2 text-gray-500 bg-white">
+                Or continue with
+              </span>
             </div>
           </div>
 
@@ -347,7 +367,10 @@ export default function AuthForm() {
                   <HiMail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  {...register("email", { required: true, pattern: /^\S+@\S+$/i })}
+                  {...register("email", {
+                    required: true,
+                    pattern: /^\S+@\S+$/i,
+                  })}
                   type="email"
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   placeholder="you@example.com"
@@ -405,7 +428,9 @@ export default function AuthForm() {
                   />
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">Please confirm your password</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    Please confirm your password
+                  </p>
                 )}
               </div>
             )}
@@ -414,7 +439,7 @@ export default function AuthForm() {
               <div className="flex items-center">
                 {/* Optional: Remember me checkbox */}
               </div>
-              
+
               {!isSignUp && (
                 <div className="text-sm">
                   <button
@@ -467,7 +492,10 @@ export default function AuthForm() {
           <div className="text-sm text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+              }}
               className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:underline transition-colors duration-200"
             >
               {isSignUp

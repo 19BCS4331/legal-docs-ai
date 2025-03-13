@@ -6,75 +6,12 @@ import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import axios from 'axios'
 import { useToast } from '../shared/Toast';
+import { plans } from '@/utils/plans'
 
 interface PricingPlansProps {
   currentPlan: string
   isAuthenticated: boolean
 }
-
-const plans = [
-  {
-    name: 'Free',
-    id: 'free',
-    priceMonthly: '₹0',
-    description: 'Perfect for trying out our service',
-    features: [
-      '3 documents per month',
-      'Basic templates',
-      'Email support',
-      'PDF export',
-      'Basic AI analysis',
-      'Standard OCR',
-      '2 GB storage',
-      'Community forums'
-    ],
-    documentsPerMonth: 3,
-    amount: 0,
-  },
-  {
-    name: 'Pro',
-    id: 'pro',
-    priceMonthly: '₹999',
-    description: 'For professionals and small businesses',
-    features: [
-      'Unlimited documents',
-      'All templates',
-      'Priority support',
-      'PDF & Word export',
-      'Advanced AI analysis',
-      'Enhanced OCR',
-      '20 GB storage',
-      'API access (100 calls/month)',
-      'Custom branding',
-      'Collaboration tools'
-    ],
-    documentsPerMonth: -1, // unlimited
-    amount: 999,
-    isPopular: true,
-  },
-  {
-    name: 'Enterprise',
-    id: 'enterprise',
-    priceMonthly: '₹4999',
-    description: 'For large organizations',
-    features: [
-      'Unlimited documents',
-      'Custom templates',
-      '24/7 phone support',
-      'All export formats',
-      'Premium AI features',
-      'Premium OCR',
-      'Unlimited storage',
-      'Unlimited API access',
-      'SSO & Team management',
-      'Dedicated account manager',
-      'Custom integrations',
-      'SLA guarantee'
-    ],
-    documentsPerMonth: -1,
-    amount: 4999,
-  },
-]
 
 export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPlansProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
@@ -114,7 +51,7 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
         currency: 'INR',
         name: 'LegalDocs AI',
         description: `Subscribe to ${plan.name} Plan`,
-        order_id: orderResponse.data.orderId,
+        order_id: orderResponse.data.id,
         handler: async function (response: any) {
           try {
             const verifyResponse = await axios.post('/api/verifyOrder', {
@@ -122,6 +59,7 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               planId: plan.id,
+              amount: plan.amount
             })
 
             if (verifyResponse.data.success) {
