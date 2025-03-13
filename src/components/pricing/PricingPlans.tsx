@@ -5,6 +5,7 @@ import { CheckIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import axios from 'axios'
+import { useToast } from '../shared/Toast';
 
 interface PricingPlansProps {
   currentPlan: string
@@ -78,6 +79,7 @@ const plans = [
 export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPlansProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const router = useRouter()
+  const { showToast } = useToast();
 
   const handlePayment = async (plan: typeof plans[0]) => {
     if (!isAuthenticated) {
@@ -86,20 +88,14 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
     }
 
     if (plan.id === 'free') {
-      // Handle free plan subscription
-      try {
-        const response = await fetch('/api/subscribe-free', {
-          method: 'POST',
-        })
-        if (response.ok) {
-          alert('Successfully subscribed to free plan!')
-          router.refresh()
-        }
-      } catch (error) {
-        console.error('Error subscribing to free plan:', error)
-        alert('Failed to subscribe to free plan. Please try again.')
+      // Prevent subscription to free plan if already on Pro or Enterprise
+      if (currentPlan === 'pro' || currentPlan === 'enterprise') {
+        showToast('error', 'Cannot subscribe to Free plan.', 'You are currently on a paid plan.');
+        return;
       }
-      return
+
+      showToast('info', 'You are already on the Free plan.', 'Enjoy our services!');
+      return;
     }
 
     setIsLoading(plan.id)
@@ -129,12 +125,14 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
             })
 
             if (verifyResponse.data.success) {
-              alert('Payment successful! Your subscription has been activated.')
-              router.refresh()
+              showToast('success', 'Payment successful!', `Your subscription to the ${plan.name} plan is now active.`);
+              router.push('/dashboard');
+            } else {
+              showToast('error', 'Payment verification failed.', 'Please contact support for assistance.');
             }
           } catch (error) {
             console.error('Payment verification failed:', error)
-            alert('Payment verification failed. Please contact support.')
+            showToast('error', 'Payment verification failed.', 'Please contact support for assistance.');
           }
         },
         prefill: {
@@ -148,13 +146,13 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
 
       const razorpay = new (window as any).Razorpay(options)
       razorpay.on('payment.failed', function (response: any) {
-        alert('Payment failed. Please try again.')
+        showToast('error', 'Payment failed.', 'Please try again.');
         console.error('Payment failed:', response.error)
       })
       razorpay.open()
     } catch (error) {
       console.error('Error initiating payment:', error)
-      alert('Failed to initiate payment. Please try again.')
+      showToast('error', 'Failed to initiate payment.', 'Please try again.');
     } finally {
       setIsLoading(null)
     }
@@ -193,8 +191,8 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
                   onClick={() => handlePayment(plan)}
                   disabled={isLoading === plan.id || isCurrentPlan}
                   className={`mt-8 block w-full rounded-lg px-4 py-3.5 text-sm font-semibold text-center shadow-sm transition-all duration-150 ease-in-out ${
-                    isCurrentPlan
-                      ? 'bg-gray-100 text-gray-600 cursor-default'
+                    isCurrentPlan 
+                      ? 'bg-gray-100 text-indigo-600 cursor-default border-2 border-indigo-500'
                       : plan.isPopular
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50'
                       : 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50'

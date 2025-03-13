@@ -48,10 +48,11 @@ export default function AuthForm() {
           email: data.email,
           password: data.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
         if (error) throw error;
+        router.push('/dashboard');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: data.email,
