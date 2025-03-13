@@ -59,12 +59,19 @@ export default function ResetPasswordPage() {
   // Check if we're in a password recovery state
   useEffect(() => {
     const checkPasswordRecovery = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        // If no session, redirect to sign in
-        router.push("/auth");
-      }
+      const { data } = await supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          // We're in the right state, do nothing
+          console.log('Password recovery flow detected');
+        } else if (!session) {
+          // If no session and not in password recovery, redirect to sign in
+          router.push('/auth');
+        }
+      });
+
+      return () => {
+        data.subscription.unsubscribe();
+      };
     };
 
     checkPasswordRecovery();
