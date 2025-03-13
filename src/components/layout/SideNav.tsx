@@ -37,6 +37,7 @@ export function SideNav() {
   const [credits, setCredits] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const pathname = usePathname();
 
   const supabase = createBrowserClient(
@@ -48,54 +49,58 @@ export function SideNav() {
     // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
-    
+
     // Clear all cookies
     document.cookie.split(";").forEach((c) => {
       document.cookie = c
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
-    
+
     // Sign out from Supabase
     await supabase.auth.signOut();
-    
+
     // Hard redirect to auth page
-    window.location.href = '/auth';
+    window.location.href = "/auth";
   };
 
   const handleProfileClick = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       setUser(user);
-      
+
       // Fetch profile data
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
         .single();
       setProfile(profileData);
 
       // Fetch credits
       const { data: creditsData } = await supabase
-        .from('credits')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("credits")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
       setCredits(creditsData);
 
       // Fetch subscription
       const { data: subscriptionData } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('subscription_end_date', { ascending: false })
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("subscription_end_date", { ascending: false })
         .limit(1)
         .single();
       setSubscription(subscriptionData);
     }
     setIsProfileOpen(true);
+    setLoading(false);
   };
 
   return (
@@ -160,13 +165,13 @@ export function SideNav() {
                       className="text-xl font-bold text-indigo-600"
                     >
                       <Image
-              src="/images/website_logo_no_bg.png"
-              alt="Legal Docs AI"
-              width={150}
-              height={40}
-              className="text-indigo-600"
-              priority
-            />
+                        src="/images/website_logo_no_bg.png"
+                        alt="Legal Docs AI"
+                        width={150}
+                        height={40}
+                        className="text-indigo-600"
+                        priority
+                      />
                     </Link>
                   </div>
                   <nav className="flex flex-1 flex-col">
@@ -177,6 +182,7 @@ export function SideNav() {
                             <li key={item.name}>
                               <Link
                                 href={item.href}
+                                onClick={() => setSidebarOpen(false)}
                                 className={classNames(
                                   pathname === item.href
                                     ? "bg-gray-50 text-indigo-600"
@@ -214,7 +220,10 @@ export function SideNav() {
                           onClick={() => setIsSignOutOpen(true)}
                           className="-mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-700 hover:bg-gray-50"
                         >
-                          <ArrowLeftOnRectangleIcon className="h-6 w-6 text-gray-400" aria-hidden="true" />
+                          <ArrowLeftOnRectangleIcon
+                            className="h-6 w-6 text-gray-400"
+                            aria-hidden="true"
+                          />
                           Sign Out
                         </button>
                       </li>
@@ -232,14 +241,14 @@ export function SideNav() {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
           <div className="flex h-16 shrink-0 items-center self-center mt-5">
             <Link href="/" className="text-xl font-bold text-indigo-600">
-            <Image
-              src="/images/website_logo_no_bg.png"
-              alt="Legal Docs AI"
-              width={120}
-              height={30}
-              className="text-indigo-600"
-              priority
-            />
+              <Image
+                src="/images/website_logo_no_bg.png"
+                alt="Legal Docs AI"
+                width={120}
+                height={30}
+                className="text-indigo-600"
+                priority
+              />
             </Link>
           </div>
           <nav className="flex flex-1 flex-col">
@@ -350,15 +359,22 @@ export function SideNav() {
                 <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
                   <div>
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                      <ArrowLeftOnRectangleIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
+                      <ArrowLeftOnRectangleIcon
+                        className="h-6 w-6 text-red-600"
+                        aria-hidden="true"
+                      />
                     </div>
                     <div className="mt-3 text-center sm:mt-5">
-                      <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
+                      <Dialog.Title
+                        as="h3"
+                        className="text-base font-semibold leading-6 text-gray-900"
+                      >
                         Sign Out Confirmation
                       </Dialog.Title>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          Are you sure you want to sign out? You will need to sign in again to access your documents.
+                          Are you sure you want to sign out? You will need to
+                          sign in again to access your documents.
                         </p>
                       </div>
                     </div>
@@ -389,11 +405,13 @@ export function SideNav() {
         </Dialog>
       </Transition.Root>
 
+      {loading && <div className="loader" />}
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         user={user}
         profile={profile}
+        setProfile={setProfile}
         credits={credits}
         subscription={subscription}
         supabase={supabase}

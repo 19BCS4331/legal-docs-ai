@@ -37,7 +37,7 @@ const testimonials = [
 
 export function Testimonials() {
   return (
-    <div className="relative bg-gradient-to-b from-white via-indigo-50/20 to-white py-24 sm:py-32">
+    <div className="relative bg-gradient-to-b from-white via-indigo-50/20 to-white py-24 sm:py-32" id='testimonials'>
       <GradientBackground />
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <MotionDiv

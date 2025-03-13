@@ -31,7 +31,7 @@ type DocumentFiltersProps = {
 
 export function DocumentFilters({ onSortChange, onStatusChange, currentSort, currentStatus }: DocumentFiltersProps) {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
       {/* Sort Dropdown */}
       <Menu as="div" className="relative">
         <Menu.Button className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300/50 hover:ring-gray-300 transition-all">
@@ -75,7 +75,7 @@ export function DocumentFilters({ onSortChange, onStatusChange, currentSort, cur
       {/* Status Filter */}
       <div className="flex items-center gap-2">
         <FunnelIcon className="h-5 w-5 text-gray-400" />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {statusFilters.map((status) => (
             <button
               key={status.value}

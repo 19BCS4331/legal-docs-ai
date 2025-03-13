@@ -23,7 +23,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <div className="relative isolate overflow-hidden bg-white py-24 sm:py-32">
+    <div className="relative isolate overflow-hidden bg-white py-24 sm:py-32" id='how-it-works'>
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:text-center">
           <MotionDiv

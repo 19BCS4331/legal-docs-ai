@@ -19,7 +19,7 @@ export function WelcomeCard({ user }: WelcomeCardProps) {
     if (hours >= 5 && hours < 12) setGreeting('Good morning')
     else if (hours >= 12 && hours < 17) setGreeting('Good afternoon')
     else if (hours >= 17 && hours < 22) setGreeting('Good evening')
-    else setGreeting('Good night')
+    else setGreeting('Good evening')
   }, [])
 
   return (

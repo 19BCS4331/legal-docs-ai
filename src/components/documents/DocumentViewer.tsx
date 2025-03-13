@@ -489,16 +489,15 @@ Format your response using this markdown structure:
     <div className="container mx-auto px-4 py-8">
       <div className="bg-white shadow sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{document.title}</h2>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-start gap-2 mt-4 w-full sm:w-auto">
               {!isEditing ? (
                 <>
                   {canEditDocument(userRole) && (
                     <button
                       type="button"
                       onClick={() => setIsEditing(true)}
-                      className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                     >
                       <PencilIcon className="h-5 w-5 mr-2" aria-hidden="true" />
                       Edit
@@ -507,7 +506,7 @@ Format your response using this markdown structure:
                   <button
                     type="button"
                     onClick={() => setIsShareDialogOpen(true)}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                    className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                   >
                     <ShareIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
                     Share
@@ -515,7 +514,7 @@ Format your response using this markdown structure:
                   <button
                     type="button"
                     onClick={() => setIsExportDialogOpen(true)}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                    className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                   >
                     <ArrowDownTrayIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
                     Export
@@ -523,7 +522,7 @@ Format your response using this markdown structure:
                   <button
                     type="button"
                     onClick={() => setIsTagsDialogOpen(true)}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                    className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                   >
                     <TagIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
                     Tags
@@ -532,7 +531,7 @@ Format your response using this markdown structure:
                     <button
                       type="button"
                       onClick={() => setIsCollaboratorDialogOpen(true)}
-                      className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                     >
                       <UserGroupIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
                       Collaborators
@@ -544,7 +543,7 @@ Format your response using this markdown structure:
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CheckIcon className="h-4 w-4 mr-2" />
                     {isSaving ? 'Saving...' : 'Save'}
@@ -552,7 +551,7 @@ Format your response using this markdown structure:
                   <button
                     onClick={handleCancel}
                     disabled={isSaving}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center w-full sm:w-auto rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <XMarkIcon className="h-4 w-4 mr-2" />
                     Cancel
@@ -560,6 +559,7 @@ Format your response using this markdown structure:
                 </div>
               )}
             </div>
+            <h2 className="text-lg font-semibold text-gray-900 text-left mt-4"> Document Title: {document.title}</h2>
           </div>
 
           {error && (

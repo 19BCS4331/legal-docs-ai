@@ -6,7 +6,7 @@ import { DocumentCheckIcon, CurrencyDollarIcon } from '@heroicons/react/24/outli
 
 export function CTASection() {
   return (
-    <div className="relative isolate overflow-hidden">
+    <div className="relative isolate overflow-hidden" id='cta-section'>
       {/* Background effect matching Hero section */}
       <div
         className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
@@ -84,7 +84,7 @@ export function CTASection() {
         </MotionDiv>
 
         {/* Right column */}
-        <div className="flex items-center justify-center lg:flex-1 lg:px-8 pt-20">
+        <div className="flex items-center justify-center lg:flex-1 lg:px-8 lg:pt-20">
           <MotionDiv
             initial="initial"
             animate="animate"
@@ -92,18 +92,18 @@ export function CTASection() {
             className="relative w-full max-w-2xl"
           >
             {/* Stats cards */}
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-500 to-indigo-600 p-8 shadow-xl">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 justify-items-center mb-5">
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-500 to-indigo-600 p-8 shadow-xl w-11/12 sm:w-auto">
                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/20" />
-                <DocumentCheckIcon className="h-12 w-12 text-white" />
-                <p className="mt-4 text-3xl font-bold text-white">100K+</p>
-                <p className="mt-2 text-sm font-medium text-indigo-100">Contracts Generated</p>
+                <DocumentCheckIcon className="h-12 w-12 text-white mx-auto sm:mx-0" />
+                <p className="mt-4 text-3xl font-bold text-white text-center sm:text-left">100K+</p>
+                <p className="mt-2 text-sm font-medium text-indigo-100 text-center sm:text-left">Contracts Generated</p>
               </div>
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-purple-500 to-purple-600 p-8 shadow-xl">
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-purple-500 to-purple-600 p-8 shadow-xl w-11/12 sm:w-auto">
                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/20" />
-                <CurrencyDollarIcon className="h-12 w-12 text-white" />
-                <p className="mt-4 text-3xl font-bold text-white">90%</p>
-                <p className="mt-2 text-sm font-medium text-purple-100">Average Cost Savings</p>
+                <CurrencyDollarIcon className="h-12 w-12 text-white mx-auto sm:mx-0" />
+                <p className="mt-4 text-3xl font-bold text-white text-center sm:text-left">90%</p>
+                <p className="mt-2 text-sm font-medium text-purple-100 text-center sm:text-left">Average Cost Savings</p>
               </div>
             </div>
           </MotionDiv>

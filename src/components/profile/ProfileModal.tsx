@@ -11,21 +11,24 @@ interface ProfileModalProps {
   onClose: () => void;
   user: any;
   profile: any;
+  setProfile: (profile: any) => void;
   credits?: { amount: number };
   subscription?: { plan_type: string };
   supabase: SupabaseClient;
 }
 
-export function ProfileModal({ isOpen, onClose, user, profile, credits, subscription, supabase }: ProfileModalProps) {
+export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credits, subscription, supabase }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const planType = subscription?.plan_type || "free";
   const isUpgradeable = planType === "free" || planType === "pro";
   const creditBalance = credits?.amount || 0;
 
   const handleSave = async () => {
     setIsSaving(true);
+    setIsFetching(true);
     try {
       const { error } = await supabase
         .from('profiles')
@@ -36,10 +39,17 @@ export function ProfileModal({ isOpen, onClose, user, profile, credits, subscrip
         .eq('id', user.id);
 
       if (error) throw error;
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      setProfile(updatedProfile);
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
     } finally {
+      setIsFetching(false);
       setIsSaving(false);
     }
   };
@@ -70,7 +80,7 @@ export function ProfileModal({ isOpen, onClose, user, profile, credits, subscrip
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 w-full sm:max-w-lg sm:p-6">
                 <div className="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
                   <button
                     type="button"
@@ -88,11 +98,11 @@ export function ProfileModal({ isOpen, onClose, user, profile, credits, subscrip
                     </Dialog.Title>
                     <div className="mt-2 space-y-6">
                       <div className="rounded-lg bg-gray-50 p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex-grow">
                             <p className="text-sm font-medium text-gray-500">Full Name</p>
                             {isEditing ? (
-                              <div className="mt-1 flex items-center gap-2">
+                              <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
                                 <input
                                   type="text"
                                   value={fullName}
@@ -113,6 +123,7 @@ export function ProfileModal({ isOpen, onClose, user, profile, credits, subscrip
                                 >
                                   Cancel
                                 </button>
+                                {isFetching && <div className="loader" />}
                               </div>
                             ) : (
                               <div className="flex items-center justify-between">
@@ -132,7 +143,7 @@ export function ProfileModal({ isOpen, onClose, user, profile, credits, subscrip
                       </div>
 
                       <div className="rounded-lg bg-gray-50 p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-sm font-medium text-gray-500">Email</p>
                             <p className="text-lg font-semibold text-gray-900">{user?.email}</p>
@@ -147,7 +158,7 @@ export function ProfileModal({ isOpen, onClose, user, profile, credits, subscrip
                       </div>
 
                       <div className="rounded-lg bg-gray-50 p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-sm font-medium text-gray-500">Current Plan</p>
                             <p className="text-lg font-semibold text-indigo-600 capitalize">{planType}</p>

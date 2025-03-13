@@ -156,7 +156,7 @@ export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogPr
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={() => setIsOpen(false)}>
+      <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -215,7 +215,7 @@ export function ExportDialog({ isOpen, setIsOpen, documentData }: ExportDialogPr
                     <select
                       value={selectedFormat}
                       onChange={(e) => setSelectedFormat(e.target.value as ExportFormat)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                     >
                       <option value="pdf">PDF Document (.pdf)</option>
                       <option value="markdown">Markdown (.md)</option>

@@ -1,5 +1,7 @@
 import AuthForm from '@/components/auth/AuthForm'
 import Image from 'next/image'
+import Link from 'next/link';
+import { FaArrowLeft } from 'react-icons/fa';
 
 export default function AuthPage() {
   return (
@@ -7,6 +9,13 @@ export default function AuthPage() {
       <div className="flex min-h-screen">
         {/* Left side - Auth form */}
         <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
+          <div className="absolute top-4 left-4">
+            <Link href="/">
+              <button className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700">
+                <FaArrowLeft size={20} />
+              </button>
+            </Link>
+          </div>
           <div className="mx-auto w-full max-w-sm lg:w-96">
             <div className="flex items-center justify-center">
             <Image

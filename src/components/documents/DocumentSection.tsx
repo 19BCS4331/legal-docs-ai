@@ -56,30 +56,28 @@ export function DocumentSection({ title, description, documents, userId }: Docum
   return (
     <div className="rounded-xl bg-white shadow-lg ring-1 ring-black/5">
       <div className="border-b border-gray-200/80 px-4 py-5 sm:px-6">
-        <div className="flex flex-col space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold leading-7 text-gray-900">{title}</h2>
-              <p className="mt-1 text-sm text-gray-500">{description}</p>
-            </div>
-            <DocumentFilters
-              currentSort={currentSort}
-              currentStatus={currentStatus}
-              onSortChange={setCurrentSort}
-              onStatusChange={setCurrentStatus}
-            />
+        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold leading-7 text-gray-900">{title}</h2>
+            <p className="mt-1 mb-2 text-sm text-gray-500">{description}</p>
           </div>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-            </div>
-            <input
-              type="search"
-              placeholder="Search documents..."
-              onChange={(e) => debouncedSearch(e.target.value)}
-              className="block w-full rounded-xl border-0 py-3 pl-10 pr-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-shadow bg-gray-50/50"
-            />
+          <DocumentFilters
+            currentSort={currentSort}
+            currentStatus={currentStatus}
+            onSortChange={setCurrentSort}
+            onStatusChange={setCurrentStatus}
+          />
+        </div>
+        <div className="relative mt-4 sm:mt-0">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
           </div>
+          <input
+            type="search"
+            placeholder="Search documents..."
+            onChange={(e) => debouncedSearch(e.target.value)}
+            className="block w-full rounded-xl border-0 py-3 pl-10 pr-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-shadow bg-gray-50/50"
+          />
         </div>
       </div>
       <div className="bg-gradient-to-b from-gray-50/50 to-white px-4 py-6 sm:px-6">
