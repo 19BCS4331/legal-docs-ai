@@ -15,6 +15,7 @@ interface PricingPlansProps {
 
 export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPlansProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [isVerifying, setIsVerifying] = useState(false)
   const router = useRouter()
   const { showToast } = useToast();
 
@@ -54,6 +55,7 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
         order_id: orderResponse.data.id,
         handler: async function (response: any) {
           try {
+            setIsVerifying(true)
             const verifyResponse = await axios.post('/api/verifyOrder', {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -71,6 +73,8 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
           } catch (error) {
             console.error('Payment verification failed:', error)
             showToast('error', 'Payment verification failed.', 'Please contact support for assistance.');
+          } finally {
+            setIsVerifying(false)
           }
         },
         prefill: {
@@ -98,6 +102,22 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
 
   return (
     <>
+      {/* Loading overlay for verification */}
+      {isVerifying && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Verifying Payment</h3>
+              <p className="text-gray-600 text-center">
+                Please wait while we verify your payment and update your subscription.
+                This may take a few moments.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
         {plans.map((plan) => {
           const isCurrentPlan = currentPlan === plan.id
@@ -127,7 +147,7 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
                 </p>
                 <button
                   onClick={() => handlePayment(plan)}
-                  disabled={isLoading === plan.id || isCurrentPlan}
+                  disabled={isLoading === plan.id || isCurrentPlan || isVerifying}
                   className={`mt-8 block w-full rounded-lg px-4 py-3.5 text-sm font-semibold text-center shadow-sm transition-all duration-150 ease-in-out ${
                     isCurrentPlan 
                       ? 'bg-gray-100 text-indigo-600 cursor-default border-2 border-indigo-500'
@@ -138,6 +158,8 @@ export default function PricingPlans({ currentPlan, isAuthenticated }: PricingPl
                 >
                   {isLoading === plan.id
                     ? 'Processing...'
+                    : isVerifying
+                    ? 'Verifying...'
                     : isCurrentPlan
                     ? 'Current Plan'
                     : 'Get Started'}
