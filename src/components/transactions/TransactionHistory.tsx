@@ -60,10 +60,11 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
         const idMatch = transaction.id.toLowerCase().includes(searchLower)
+        const transactionTypeMatch = transaction.transaction_type.toLowerCase().includes(searchLower)
         const paymentIdMatch = transaction.gateway_payment_id.toLowerCase().includes(searchLower)
         const planMatch = transaction.plan_type ? transaction.plan_type.toLowerCase().includes(searchLower) : false
         
-        if (!idMatch && !paymentIdMatch && !planMatch) {
+        if (!idMatch && !transactionTypeMatch && !paymentIdMatch && !planMatch) {
           return false
         }
       }
@@ -238,54 +239,75 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
         {/* Expanded filters */}
         {filters.showFilters && (
           <div className="mt-4 grid grid-cols-1 gap-y-4 sm:grid-cols-3 sm:gap-x-6">
-            <div>
-              <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700">
+            <div className="relative">
+              <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 mb-1">
                 Transaction Type
               </label>
-              <select
-                id="type-filter"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                value={filters.type}
-                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              >
-                <option value="all">All Types</option>
-                <option value="credit_purchase">Credit Purchase</option>
-                <option value="plan_subscription">Plan Subscription</option>
-              </select>
+              <div className="relative">
+                <select
+                  id="type-filter"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white"
+                  value={filters.type}
+                  onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                >
+                  <option value="all">All Types</option>
+                  <option value="credit_purchase">Credit Purchase</option>
+                  <option value="plan_subscription">Plan Subscription</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
             </div>
             
-            <div>
-              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700">
+            <div className="relative">
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
                 Status
               </label>
-              <select
-                id="status-filter"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                <option value="all">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-                <option value="refunded">Refunded</option>
-              </select>
+              <div className="relative">
+                <select
+                  id="status-filter"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white"
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                  <option value="refunded">Refunded</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
             </div>
             
-            <div>
-              <label htmlFor="date-filter" className="block text-sm font-medium text-gray-700">
+            <div className="relative">
+              <label htmlFor="date-filter" className="block text-sm font-medium text-gray-700 mb-1">
                 Date Range
               </label>
-              <select
-                id="date-filter"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                value={filters.dateRange}
-                onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-              >
-                <option value="all">All Time</option>
-                <option value="last30days">Last 30 Days</option>
-                <option value="last90days">Last 90 Days</option>
-              </select>
+              <div className="relative">
+                <select
+                  id="date-filter"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white"
+                  value={filters.dateRange}
+                  onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
+                >
+                  <option value="all">All Time</option>
+                  <option value="last30days">Last 30 Days</option>
+                  <option value="last90days">Last 90 Days</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         )}

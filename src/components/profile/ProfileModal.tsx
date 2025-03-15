@@ -3,8 +3,10 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, PencilIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { PurchaseCreditsModal } from "../credits/PurchaseCreditsModal";
+import { useRouter } from "next/navigation";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -15,16 +17,19 @@ interface ProfileModalProps {
   credits?: { amount: number };
   subscription?: { plan_type: string };
   supabase: SupabaseClient;
+  setCredits?: (credits: any) => void;
 }
 
-export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credits, subscription, supabase }: ProfileModalProps) {
+export function ProfileModal({ isOpen, onClose, user, profile, setProfile, credits, subscription, supabase, setCredits }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const planType = subscription?.plan_type || "free";
   const isUpgradeable = planType === "free" || planType === "pro";
   const creditBalance = credits?.amount || 0;
+  const router = useRouter();
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -51,6 +56,25 @@ export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credit
     } finally {
       setIsFetching(false);
       setIsSaving(false);
+    }
+  };
+
+  const handlePurchaseSuccess = async () => {
+    // Fetch updated credits data
+    if (user && setCredits) {
+      try {
+        const { data: creditsData } = await supabase
+          .from("credits")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (creditsData) {
+          setCredits(creditsData);
+        }
+      } catch (error) {
+        console.error("Error fetching updated credits:", error);
+      }
     }
   };
 
@@ -107,8 +131,8 @@ export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credit
                                   type="text"
                                   value={fullName}
                                   onChange={(e) => setFullName(e.target.value)}
-                                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                                  placeholder="Enter your full name"
+                                  className="block w-full rounded-md border-0 py-1.5 pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                  placeholder={profile?.full_name || "Enter your full name"}
                                 />
                                 <button
                                   onClick={handleSave}
@@ -151,7 +175,11 @@ export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credit
                           <div>
                             <p className="text-sm font-medium text-gray-500">Member Since</p>
                             <p className="text-lg font-semibold text-gray-900">
-                              {new Date(profile?.created_at || user?.created_at).toLocaleDateString()}
+                              {new Date(profile?.created_at || user?.created_at).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
                             </p>
                           </div>
                         </div>
@@ -167,6 +195,16 @@ export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credit
                             <p className="text-sm font-medium text-gray-500">Credits Available</p>
                             <p className="text-lg font-semibold text-indigo-600">{creditBalance}</p>
                           </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <button
+                            onClick={() => setShowPurchaseModal(true)}
+                            className="w-full flex items-center justify-center py-2 px-4 border border-indigo-600 rounded-md shadow-sm text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <PlusCircleIcon className="h-4 w-4 mr-1" />
+                            Buy Additional Credits
+                          </button>
                         </div>
                       </div>
 
@@ -189,6 +227,15 @@ export function ProfileModal({ isOpen, onClose, user, profile,setProfile, credit
           </div>
         </div>
       </Dialog>
+      
+      {/* Purchase Credits Modal */}
+      <PurchaseCreditsModal 
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        onSuccess={() => {
+          handlePurchaseSuccess();
+        }}
+      />
     </Transition.Root>
   );
 }

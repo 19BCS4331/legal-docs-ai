@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dialog, Transition } from "@headlessui/react";
@@ -47,6 +47,90 @@ export function SideNav() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // Fetch user data function that can be reused
+  const fetchUserData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
+      setUser(user);
+
+      // Use Promise.all to fetch all data in parallel
+      const [profileResult, creditsResult, subscriptionResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single(),
+        supabase
+          .from("credits")
+          .select("*")
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("subscription_end_date", { ascending: false })
+          .limit(1)
+          .single()
+      ]);
+
+      setProfile(profileResult.data);
+      setCredits(creditsResult.data);
+      setSubscription(subscriptionResult.data);
+      
+      // Cache the data in localStorage with timestamp
+      const cacheData = {
+        user,
+        profile: profileResult.data,
+        credits: creditsResult.data,
+        subscription: subscriptionResult.data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('userProfileCache', JSON.stringify(cacheData));
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  // Load cached data on initial render and set up background refresh
+  useEffect(() => {
+    // Try to load from cache first
+    const cachedData = localStorage.getItem('userProfileCache');
+    if (cachedData) {
+      try {
+        const parsedData = JSON.parse(cachedData);
+        const cacheAge = Date.now() - parsedData.timestamp;
+        
+        // Use cache if it's less than 5 minutes old
+        if (cacheAge < 5 * 60 * 1000) {
+          setUser(parsedData.user);
+          setProfile(parsedData.profile);
+          setCredits(parsedData.credits);
+          setSubscription(parsedData.subscription);
+        }
+      } catch (e) {
+        console.error("Error parsing cached data:", e);
+      }
+    }
+    
+    // Fetch fresh data in the background
+    fetchUserData();
+    
+    // Set up a refresh interval (every 5 minutes)
+    const intervalId = setInterval(fetchUserData, 5 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [fetchUserData]);
+
   const handleSignOut = async () => {
     // Clear all storage
     localStorage.clear();
@@ -66,43 +150,14 @@ export function SideNav() {
     window.location.href = "/auth";
   };
 
-  const handleProfileClick = async () => {
-    setLoading(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      setUser(user);
-
-      // Fetch profile data
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      setProfile(profileData);
-
-      // Fetch credits
-      const { data: creditsData } = await supabase
-        .from("credits")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-      setCredits(creditsData);
-
-      // Fetch subscription
-      const { data: subscriptionData } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .order("subscription_end_date", { ascending: false })
-        .limit(1)
-        .single();
-      setSubscription(subscriptionData);
-    }
+  const handleProfileClick = () => {
+    // Just open the modal immediately - data is already loaded or loading in background
     setIsProfileOpen(true);
-    setLoading(false);
+    
+    // If we don't have data yet or it's stale, refresh in background
+    if (!user || loading) {
+      fetchUserData();
+    }
   };
 
   return (
@@ -417,6 +472,7 @@ export function SideNav() {
         credits={credits}
         subscription={subscription}
         supabase={supabase}
+        setCredits={setCredits}
       />
     </>
   );
