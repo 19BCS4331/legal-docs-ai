@@ -271,7 +271,26 @@ export function SideNav() {
                             className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
                             aria-hidden="true"
                           />
-                          Profile
+                          <div className="flex items-center gap-2">
+                            {profile?.full_name || "Profile"}
+                            {subscription?.plan_type && (
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  subscription.plan_type === 'enterprise'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : subscription.plan_type === 'pro'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {subscription.plan_type === 'enterprise'
+                                  ? 'Enterprise'
+                                  : subscription.plan_type === 'pro'
+                                  ? 'Pro'
+                                  : 'Free'}
+                              </span>
+                            )}
+                          </div>
                         </button>
                         <button
                           onClick={() => setIsSignOutOpen(true)}
@@ -351,7 +370,26 @@ export function SideNav() {
                       className="h-6 w-6 shrink-0 text-gray-400 group-hover:text-indigo-600"
                       aria-hidden="true"
                     />
-                    Profile
+                    <div className="flex items-center gap-2">
+                      {profile?.full_name || "Profile"}
+                      {subscription?.plan_type && (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            subscription.plan_type === 'enterprise'
+                              ? 'bg-purple-100 text-purple-800'
+                              : subscription.plan_type === 'pro'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {subscription.plan_type === 'enterprise'
+                            ? 'Enterprise'
+                            : subscription.plan_type === 'pro'
+                            ? 'Pro'
+                            : 'Free'}
+                        </span>
+                      )}
+                    </div>
                   </button>
                   <button
                     onClick={() => setIsSignOutOpen(true)}

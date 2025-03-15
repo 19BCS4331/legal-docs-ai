@@ -1,9 +1,8 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, CheckIcon, SparklesIcon } from '@heroicons/react/24/outline'
-import Script from 'next/script'
 import axios from 'axios'
 import { useToast } from '../shared/Toast'
 import { plans } from '@/utils/plans'
@@ -24,8 +23,30 @@ export function PurchasePlanModal({
 }: PurchasePlanModalProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false)
   const router = useRouter()
   const { showToast } = useToast()
+
+  // Load Razorpay script when modal is opened
+  useEffect(() => {
+    if (isOpen && !razorpayLoaded) {
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
+      script.onload = () => {
+        setRazorpayLoaded(true)
+      }
+      document.body.appendChild(script)
+      
+      return () => {
+        // Clean up only if the script exists in the document
+        const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')
+        if (existingScript && existingScript.parentNode) {
+          existingScript.parentNode.removeChild(existingScript)
+        }
+      }
+    }
+  }, [isOpen, razorpayLoaded])
 
   const handlePayment = async (plan: typeof plans[0]) => {
     if (plan.id === 'free') {
@@ -42,6 +63,12 @@ export function PurchasePlanModal({
     // Don't allow resubscribing to the same plan
     if (currentPlan === plan.id) {
       showToast('info', `You are already on the ${plan.name} plan.`, 'Enjoy our services!')
+      return
+    }
+
+    // Check if Razorpay is loaded
+    if (!razorpayLoaded || typeof window === 'undefined' || !(window as any).Razorpay) {
+      showToast('error', 'Payment system is loading.', 'Please try again in a moment.')
       return
     }
 
@@ -85,6 +112,7 @@ export function PurchasePlanModal({
               }
               onClose()
               router.refresh()
+              window.location.reload()
             } else {
               showToast('error', 'Payment verification failed.', 'Please contact support for assistance.')
             }
@@ -258,10 +286,6 @@ export function PurchasePlanModal({
           </div>
         </Dialog>
       </Transition.Root>
-      <Script
-        id="razorpay-checkout-js"
-        src="https://checkout.razorpay.com/v1/checkout.js"
-      />
     </>
   )
 }

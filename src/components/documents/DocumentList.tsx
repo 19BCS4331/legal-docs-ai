@@ -1,7 +1,7 @@
 import { Document } from '@/types'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { DocumentIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { DocumentIcon, ShareIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 
 type DocumentListProps = {
   documents: Document[]
@@ -45,13 +45,45 @@ export function DocumentList({ documents, userId }: DocumentListProps) {
                   Updated {format(new Date(document.updated_at), 'MMM d, yyyy')}
                 </p>
               </div>
+              
+              {/* Document tags */}
+              {document.tags && document.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {document.tags.map(tag => (
+                    <span 
+                      key={tag.id}
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+                      style={{ 
+                        backgroundColor: `${tag.color}15`, // Very light background
+                        color: tag.color,
+                        border: `1px solid ${tag.color}30` // Light border
+                      }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </Link>
           </div>
-          {document.user_id !== userId && (
-            <div className="flex-shrink-0">
-              <ShareIcon className="h-5 w-5 text-gray-400" title="Shared with you" />
-            </div>
-          )}
+          <div className="flex-shrink-0 flex items-center space-x-2">
+            {/* Display badge based on shareType */}
+            {document.user_id !== userId && (
+              <>
+                {document.shareType === 'collaboration' ? (
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                    <UserGroupIcon className="mr-1 h-3 w-3" /> Collaboration
+                  </span>
+                ) : document.shareType === 'shared' ? (
+                  <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+                    <ShareIcon className="mr-1 h-3 w-3" /> Shared
+                  </span>
+                ) : (
+                  <ShareIcon className="h-5 w-5 text-gray-400" title="Shared with you" />
+                )}
+              </>
+            )}
+          </div>
           <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
             <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />

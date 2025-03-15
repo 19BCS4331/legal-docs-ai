@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import { FunnelIcon, ChevronDownIcon } from '@heroicons/react/20/solid'
 import { CheckIcon } from '@heroicons/react/24/outline'
+import { Tag } from '@/types'
 
 export type SortOption = 'updated_desc' | 'updated_asc' | 'name_asc' | 'name_desc'
 export type StatusFilter = 'all' | 'draft' | 'in_review' | 'completed'

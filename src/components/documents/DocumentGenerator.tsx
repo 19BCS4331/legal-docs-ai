@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { Template } from '@/types'
@@ -11,6 +11,8 @@ import { ProDocumentSettings } from './ProDocumentSettings'
 import { MotionDiv, fadeIn } from '@/components/shared/animations'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getMemoizedContent, saveMemoizedContent } from '@/utils/aiMemoization'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { useToast } from '../shared/Toast'
 
 interface DocumentGeneratorProps {
   templates: Template[]
@@ -18,6 +20,7 @@ interface DocumentGeneratorProps {
   credits: number
   userId: string
   userPlan?: 'free' | 'pro' | 'enterprise'
+  initialTemplateId?: string
 }
 
 export default function DocumentGenerator({
@@ -26,13 +29,16 @@ export default function DocumentGenerator({
   credits,
   userId,
   userPlan,
+  initialTemplateId
 }: DocumentGeneratorProps) {
+  const { showToast } = useToast()
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [documentTitle, setDocumentTitle] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const router = useRouter()
+  const documentTitleInputRef = useRef<HTMLInputElement>(null)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,19 +52,52 @@ export default function DocumentGenerator({
   const [jurisdiction, setJurisdiction] = useState<string>('')
   const [isProUser] = useState(userPlan === 'pro' || userPlan === 'enterprise')
 
+  // Auto-select template if initialTemplateId is provided
+  useEffect(() => {
+    if (initialTemplateId && templates.length > 0) {
+      const template = templates.find(t => t.id === initialTemplateId)
+      if (template) {
+        setSelectedTemplate(template)
+      }
+    }
+  }, [initialTemplateId, templates])
+
+  const handleSelectTemplate = (template: Template) => {
+    setSelectedTemplate(template);
+    setError(null);
+    // Reset form state when selecting a new template
+    setDocumentTitle('');
+  };
+
+  const handleBackToTemplates = () => {
+    setSelectedTemplate(null);
+    setError(null);
+  };
+
   const onSubmit = async (data: any) => {
     if (!hasCredits) {
       setError('You need credits to generate documents. Please purchase credits or upgrade your plan.')
+      showToast('error', 'You need credits to generate documents. Please purchase credits or upgrade your plan.')
       return
     }
 
     if (!selectedTemplate) {
       setError('Please select a template first')
+      showToast('error', 'Please select a template first')
       return
     }
 
     if(!documentTitle.trim()) {
       setError('Please enter a document title')
+      showToast('error', 'Please enter a document title')
+      // Scroll to the document title input
+      if (documentTitleInputRef.current) {
+        documentTitleInputRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        documentTitleInputRef.current.focus();
+      }
       return
     }
 
@@ -260,7 +299,7 @@ ${formattedPrompt}`
       </div>
 
       {/* Error Message */}
-      {error && (
+      {error && error !== 'Please enter a document title' && (
         <div className="mb-8 rounded-md bg-red-50 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -284,84 +323,98 @@ ${formattedPrompt}`
         </div>
       )}
 
-      {/* Document Title Input */}
-      <div className="mb-6">
-        <label htmlFor="documentTitle" className="block text-sm font-medium text-gray-700">
-          Document Title
-        </label>
-        <div className="relative">
-          <input
-            type="text"
-            id="documentTitle"
-            name="documentTitle"
-            className={`w-full rounded-lg border-0 py-3 pl-4 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ${
-              error === 'Please enter a document title'
-                ? 'ring-red-500 focus:ring-red-500'
-                : 'ring-gray-300 focus:ring-indigo-600'
-            } placeholder:text-gray-400 focus:ring-2 focus:ring-inset`}
-            placeholder="Enter document title"
-            value={documentTitle}
-            onChange={(e) => setDocumentTitle(e.target.value)}
-          />
-          {error === 'Please enter a document title' && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          )}
-        </div>
-        {error === 'Please enter a document title' && (
-          <p className="mt-2 text-sm text-red-600" id="email-error">
-            Please enter a document title
-          </p>
-        )}
-      </div>
-
       <div className="rounded-lg border border-gray-200 bg-white shadow">
-        <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-3">
-          {/* Template Selection */}
-          <div className="px-4 py-6 sm:px-6 lg:border-r lg:border-gray-200">
+        {!selectedTemplate ? (
+          // Template Selection View
+          <div className="p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Select a Template</h2>
             <TemplateSelector
               templates={templates}
-              onSelect={setSelectedTemplate}
-              selectedTemplate={selectedTemplate}
+              onSelect={handleSelectTemplate}
+              selectedTemplate={null}
               userPlan={userPlan}
             />
           </div>
-
-          {/* Template Form */}
-          <div className="col-span-2 px-4 py-6 sm:px-6">
-            {selectedTemplate && (
-              <>
-                {/* Pro Settings for pro/enterprise users */}
-                {isProUser && (
-                  <div className="mb-6">
-                    <ProDocumentSettings
-                      onToneChange={setWritingTone}
-                      onClausesChange={setCustomClauses}
-                      onJurisdictionChange={setJurisdiction}
-                      defaultTone="formal"
-                      defaultClauses={[]}
-                      defaultJurisdiction=""
-                    />
+        ) : (
+          // Template Form View
+          <div className="p-6">
+            <div className="flex items-center mb-6">
+              <button
+                type="button"
+                onClick={handleBackToTemplates}
+                className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                <ArrowLeftIcon className="mr-1 h-4 w-4" />
+                Back to templates
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">{selectedTemplate.name}</h2>
+              <p className="mt-1 text-sm text-gray-500">{selectedTemplate.description}</p>
+            </div>
+            
+            {/* Document Title Input */}
+            <div className="mb-6">
+              <label htmlFor="documentTitle" className="block text-sm font-medium text-gray-700">
+                Document Title
+              </label>
+              <div className="relative mt-2">
+                <input
+                  ref={documentTitleInputRef}
+                  type="text"
+                  id="documentTitle"
+                  name="documentTitle"
+                  className={`w-full rounded-lg border-0 py-3 pl-4 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ${
+                    error === 'Please enter a document title'
+                      ? 'ring-red-500 focus:ring-red-500'
+                      : 'ring-gray-300 focus:ring-indigo-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset`}
+                  placeholder="Enter document title"
+                  value={documentTitle}
+                  onChange={(e) => setDocumentTitle(e.target.value)}
+                />
+                {error === 'Please enter a document title' && (
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </div>
                 )}
-                
-                <TemplateForm
-                  template={selectedTemplate}
-                  onSubmit={onSubmit}
-                  isGenerating={isGenerating}
-                  progress={progress}
+              </div>
+              {error === 'Please enter a document title' && (
+                <p className="mt-2 text-sm text-red-600" id="email-error">
+                  Please enter a document title
+                </p>
+              )}
+            </div>
+            
+            {/* Pro Settings for pro/enterprise users */}
+            {isProUser && (
+              <div className="mb-6">
+                <ProDocumentSettings
+                  onToneChange={setWritingTone}
+                  onClausesChange={setCustomClauses}
+                  onJurisdictionChange={setJurisdiction}
+                  defaultTone="formal"
+                  defaultClauses={[]}
+                  defaultJurisdiction=""
                 />
-              </>
+              </div>
             )}
+            
+            <TemplateForm
+              template={selectedTemplate}
+              onSubmit={onSubmit}
+              isGenerating={isGenerating}
+              progress={progress}
+            />
           </div>
-        </div>
+        )}
       </div>
     </MotionDiv>
   )

@@ -93,15 +93,14 @@ export interface DocumentPresence {
   }
 }
 
-export interface Document {
+export type Document = {
   id: string
   title: string
   content: string
-  created_at: string
-  updated_at: string
   user_id: string
   template_id: string | null
-  input_data: Record<string, any>
+  created_at: string
+  updated_at: string
   status: 'draft' | 'generated' | 'completed'
   template?: Template
   tags?: Tag[]
@@ -116,6 +115,9 @@ export interface Document {
   collaborators?: DocumentCollaborator[]
   comments?: DocumentComment[]
   active_users?: DocumentPresence[]
+  shareType?: 'collaboration' | 'shared'
+  role?: string
+  input_data: Record<string, any>
 }
 
 export interface DocumentVersion {

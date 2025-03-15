@@ -116,22 +116,61 @@ export default async function DocumentPage(props: PageProps) {
       .eq('document_collaborators.user_id', user.id)
       .single() as { data: DocumentWithTemplate & { document_collaborators: Array<{ role: string }> } | null, error: any }
 
-    if (sharedError) {
+    if (sharedError && sharedError.code !== 'PGRST116') {
+      // PGRST116 is the error code for "Results contain 0 rows" - we'll check document_shares next
       console.error('Error fetching shared document:', sharedError)
-      notFound()
     }
 
-    if (!sharedDoc) {
-      console.log('No document found with ID:', id)
-      notFound()
+    if (sharedDoc) {
+      // Set the user's role from collaborators
+      userRole = sharedDoc.document_collaborators[0].role
+
+      // Remove the document_collaborators field before transforming
+      const { document_collaborators, ...docWithoutCollaborators } = sharedDoc
+      data = docWithoutCollaborators
+    } else {
+      // Check if document is in document_shares
+      const { data: sharedViaShares, error: sharesError } = await supabase
+        .from('document_shares')
+        .select(`
+          document:documents(
+            id,
+            title,
+            content,
+            user_id,
+            status,
+            created_at,
+            updated_at,
+            template:document_templates(*),
+            tags:document_tags(
+              tag:tags(
+                id,
+                name,
+                color,
+                created_at,
+                user_id
+              )
+            )
+          )
+        `)
+        .eq('document_id', id)
+        .eq('shared_with', user.id)
+        .single() as { data: { document: DocumentWithTemplate } | null, error: any }
+
+      if (sharesError) {
+        console.error('Error fetching document from shares:', sharesError)
+        notFound()
+      }
+
+      if (!sharedViaShares || !sharedViaShares.document) {
+        console.log('No document found with ID:', id)
+        notFound()
+      }
+
+      // Set user role to viewer for shared documents
+      userRole = 'viewer'
+      data = sharedViaShares.document
     }
-
-    // Set the user's role from collaborators
-    userRole = sharedDoc.document_collaborators[0].role
-
-    // Remove the document_collaborators field before transforming
-    const { document_collaborators, ...docWithoutCollaborators } = sharedDoc
-    data = docWithoutCollaborators
   }
 
   if (!data) {

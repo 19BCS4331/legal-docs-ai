@@ -13,6 +13,7 @@ import {
 import { useState } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
+import { PurchasePlanModal } from '../pricing/PurchasePlanModal'
 
 interface TemplateStats {
   template_id: string
@@ -24,26 +25,49 @@ interface TemplateListProps {
   templateStats: TemplateStats[]
   userPlan: string
   isAdmin: boolean
+  selectedCategories?: string[]
+  selectedAccessLevels?: string[]
 }
 
-export function TemplateList({ templates, templateStats, userPlan, isAdmin }: TemplateListProps) {
+export function TemplateList({ 
+  templates, 
+  templateStats, 
+  userPlan, 
+  isAdmin,
+  selectedCategories = [],
+  selectedAccessLevels = ['free']
+}: TemplateListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
 
   // Get unique categories
   const categories = Array.from(new Set(templates.map((t) => t.category)))
 
-  // Filter templates based on search and category
+  // Filter templates based on search, category, and access level
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
       searchQuery === '' ||
       template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       template.description.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const matchesCategory = !selectedCategory || template.category === selectedCategory
+    const matchesCategory = 
+      !selectedCategory && selectedCategories.length === 0 || 
+      selectedCategory === template.category ||
+      (selectedCategories.length > 0 && selectedCategories.includes(template.category))
 
-    return matchesSearch && matchesCategory
+    // Check if template matches selected access levels
+    const isPremium = template.available_in_plan.some(plan => plan === 'pro' || plan === 'enterprise') && 
+                     !template.available_in_plan.includes('free')
+    
+    const matchesAccessLevel =
+      selectedAccessLevels.length === 0 ||
+      (selectedAccessLevels.includes('free') && !isPremium) ||
+      (selectedAccessLevels.includes('premium') && isPremium)
+
+    return matchesSearch && matchesCategory && matchesAccessLevel
   })
 
   // Group templates by category
@@ -79,6 +103,15 @@ export function TemplateList({ templates, templateStats, userPlan, isAdmin }: Te
       alert('Failed to delete template')
     } finally {
       setIsDeleting(null)
+    }
+  }
+
+  const handleTemplateClick = (template: Template) => {
+    const isAccessible = template.available_in_plan.includes(userPlan)
+    
+    if (!isAccessible) {
+      setSelectedTemplate(template)
+      setShowPlanModal(true)
     }
   }
 
@@ -154,22 +187,30 @@ export function TemplateList({ templates, templateStats, userPlan, isAdmin }: Te
               {templates.map((template) => {
                 const stats = templateStats.find((s) => s.template_id === template.id)
                 const isAccessible = template.available_in_plan.includes(userPlan)
+                const isPremium = template.available_in_plan.some(plan => plan === 'pro' || plan === 'enterprise') && 
+                                 !template.available_in_plan.includes('free')
 
                 return (
                   <div
                     key={template.id}
                     className={`relative overflow-hidden rounded-lg border bg-white p-6 shadow-sm transition-all hover:shadow ${
-                      !isAccessible ? 'opacity-75' : ''
+                      !isAccessible ? 'opacity-85' : ''
                     }`}
+                    onClick={!isAccessible ? () => handleTemplateClick(template) : undefined}
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900">{template.name}</h3>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          {template.name}
+                          {isPremium && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                              <StarIcon className="mr-1 h-3 w-3" />
+                              Premium
+                            </span>
+                          )}
+                        </h3>
                         <p className="mt-1 text-sm text-gray-500">{template.description}</p>
                       </div>
-                      {template.available_in_plan.includes('premium') && (
-                        <StarIcon className="h-5 w-5 text-yellow-400" />
-                      )}
                       {isAdmin && (
                         <div className="ml-4 flex items-center space-x-2">
                           <Link
@@ -179,7 +220,10 @@ export function TemplateList({ templates, templateStats, userPlan, isAdmin }: Te
                             <PencilSquareIcon className="h-5 w-5" />
                           </Link>
                           <button
-                            onClick={() => handleDelete(template.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(template.id);
+                            }}
                             disabled={isDeleting === template.id}
                             className="rounded-md p-1.5 text-gray-400 hover:bg-gray-50 hover:text-red-500 disabled:opacity-50"
                           >
@@ -229,9 +273,13 @@ export function TemplateList({ templates, templateStats, userPlan, isAdmin }: Te
                           <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
                         </Link>
                       ) : (
-                        <span className="text-sm font-medium text-gray-500">
-                          Premium template
-                        </span>
+                        <button
+                          onClick={() => handleTemplateClick(template)}
+                          className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                        >
+                          Upgrade to unlock
+                          <StarIcon className="ml-1 h-4 w-4 text-yellow-400" />
+                        </button>
                       )}
                     </div>
                   </div>
@@ -252,6 +300,17 @@ export function TemplateList({ templates, templateStats, userPlan, isAdmin }: Te
           </div>
         )}
       </div>
+
+      {/* Purchase Plan Modal */}
+      <PurchasePlanModal
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        currentPlan={userPlan}
+        onSuccess={() => {
+          setShowPlanModal(false);
+          window.location.reload();
+        }}
+      />
     </MotionDiv>
   )
 }

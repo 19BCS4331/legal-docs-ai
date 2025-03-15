@@ -1,10 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { TemplateList } from '@/components/templates/TemplateList'
-import { TemplateFilters } from '@/components/templates/TemplateFilters'
 import Link from 'next/link'
 import { PlusIcon } from '@heroicons/react/24/outline'
+import { TemplatesClientWrapper } from '@/components/templates/TemplatesClientWrapper'
 
 export const metadata = {
   title: 'Templates - LegalDocs AI',
@@ -48,6 +47,7 @@ export default async function TemplatesPage() {
     .from('subscriptions')
     .select('plan_type, status')
     .eq('user_id', session.user.id)
+    .eq('status', 'active')
     .single()
 
   // Get all templates and filter on client side for better UX
@@ -61,6 +61,13 @@ export default async function TemplatesPage() {
   const { data: templateStats } = await supabase.rpc('get_template_usage_stats', {
     user_id: session.user.id
   })
+
+  // Get user credits
+  const { data: credits } = await supabase
+    .from('credits')
+    .select('amount')
+    .eq('user_id', session.user.id)
+    .single()
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -88,22 +95,29 @@ export default async function TemplatesPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-            {/* Filters */}
-            <div className="lg:col-span-1">
-              <TemplateFilters subscription={subscription} />
-            </div>
-
-            {/* Template List */}
-            <div className="lg:col-span-3">
-              <TemplateList
-                templates={templates || []}
-                templateStats={templateStats || []}
-                userPlan={subscription?.plan_type || 'free'}
-                isAdmin={isAdmin}
-              />
+          {/* Credit Information */}
+          <div className="rounded-lg bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900">Available Credits</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Credits are used when generating documents from templates
+                </p>
+              </div>
+              <div className="text-3xl font-bold text-indigo-600">
+                {credits?.amount || 0}
+              </div>
             </div>
           </div>
+
+          {/* Client-side wrapper for filters and template list */}
+          <TemplatesClientWrapper
+            templates={templates || []}
+            templateStats={templateStats || []}
+            userPlan={subscription?.plan_type || 'free'}
+            isAdmin={isAdmin}
+            subscription={subscription}
+          />
         </div>
       </div>
     </div>

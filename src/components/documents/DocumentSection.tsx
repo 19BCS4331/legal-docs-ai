@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { DocumentList } from './DocumentList'
 import { DocumentFilters, SortOption, StatusFilter } from './DocumentFilters'
-import { Document } from '@/types'
+import { Document, Tag } from '@/types'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import debounce from 'lodash/debounce'
 
@@ -12,6 +12,7 @@ type DocumentSectionProps = {
   description: string
   documents: Document[]
   userId: string
+  availableTags: Tag[]
 }
 
 function sortDocuments(docs: Document[], sort: SortOption) {
@@ -31,27 +32,41 @@ function sortDocuments(docs: Document[], sort: SortOption) {
   })
 }
 
-function filterDocuments(docs: Document[], status: StatusFilter, search: string) {
+function filterDocuments(docs: Document[], status: StatusFilter, search: string, selectedTags: string[]) {
   return docs.filter(doc => {
     const matchesStatus = status === 'all' || doc.status === status
     const matchesSearch = search === '' || 
       doc.title?.toLowerCase().includes(search.toLowerCase()) ||
       doc.template?.name?.toLowerCase().includes(search.toLowerCase())
-    return matchesStatus && matchesSearch
+    
+    // Filter by tags if any are selected
+    const matchesTags = selectedTags.length === 0 || 
+      (doc.tags && doc.tags.some(tag => selectedTags.includes(tag.id)))
+    
+    return matchesStatus && matchesSearch && matchesTags
   })
 }
 
-export function DocumentSection({ title, description, documents, userId }: DocumentSectionProps) {
+export function DocumentSection({ title, description, documents, userId, availableTags }: DocumentSectionProps) {
   const [currentSort, setCurrentSort] = useState<SortOption>('updated_desc')
   const [currentStatus, setCurrentStatus] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   const sortedDocs = sortDocuments(documents, currentSort)
-  const filteredDocs = filterDocuments(sortedDocs, currentStatus, searchQuery)
+  const filteredDocs = filterDocuments(sortedDocs, currentStatus, searchQuery, selectedTags)
 
   const debouncedSearch = debounce((value: string) => {
     setSearchQuery(value)
   }, 300)
+
+  const handleTagToggle = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId) 
+        : [...prev, tagId]
+    )
+  }
 
   return (
     <div className="rounded-xl bg-white shadow-lg ring-1 ring-black/5">
@@ -79,6 +94,38 @@ export function DocumentSection({ title, description, documents, userId }: Docum
             className="block w-full rounded-xl border-0 py-3 pl-10 pr-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-shadow bg-gray-50/50"
           />
         </div>
+        
+        {/* Tag filters */}
+        {availableTags.length > 0 && (
+          <div className="mt-4">
+            <div className="text-sm font-medium text-gray-700 mb-2">Filter by tags:</div>
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => handleTagToggle(tag.id)}
+                  className={`
+                    inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
+                    ${selectedTags.includes(tag.id) 
+                      ? 'ring-2 ring-offset-1' 
+                      : 'opacity-70 hover:opacity-100'}
+                    transition-all
+                  `}
+                  style={{ 
+                    backgroundColor: `${tag.color}20`, // Add transparency
+                    color: tag.color,
+                    borderColor: tag.color
+                  }}
+                >
+                  {tag.name}
+                  {selectedTags.includes(tag.id) && (
+                    <span className="ml-1 text-xs">×</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="bg-gradient-to-b from-gray-50/50 to-white px-4 py-6 sm:px-6">
         <DocumentList documents={filteredDocs} userId={userId} />

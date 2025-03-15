@@ -2,16 +2,47 @@
 
 import { MotionDiv, fadeIn } from '@/components/shared/animations'
 import { StarIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react'
+import { PurchasePlanModal } from '../pricing/PurchasePlanModal'
 
 interface TemplateFiltersProps {
   subscription: {
     plan_type: string
     status: string
   } | null
+  onCategoryChange: (categories: string[]) => void
+  onAccessLevelChange: (accessLevels: string[]) => void
+  categories: string[]
 }
 
-export function TemplateFilters({ subscription }: TemplateFiltersProps) {
+export function TemplateFilters({ 
+  subscription, 
+  onCategoryChange, 
+  onAccessLevelChange,
+  categories = []
+}: TemplateFiltersProps) {
   const userPlan = subscription?.plan_type || 'free'
+  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedAccessLevels, setSelectedAccessLevels] = useState<string[]>(['free'])
+
+  const handleCategoryChange = (category: string) => {
+    const updatedCategories = selectedCategories.includes(category)
+      ? selectedCategories.filter(c => c !== category)
+      : [...selectedCategories, category]
+    
+    setSelectedCategories(updatedCategories)
+    onCategoryChange(updatedCategories)
+  }
+
+  const handleAccessLevelChange = (level: string) => {
+    const updatedLevels = selectedAccessLevels.includes(level)
+      ? selectedAccessLevels.filter(l => l !== level)
+      : [...selectedAccessLevels, level]
+    
+    setSelectedAccessLevels(updatedLevels)
+    onAccessLevelChange(updatedLevels)
+  }
 
   return (
     <MotionDiv initial="initial" animate="animate" variants={fadeIn}>
@@ -22,27 +53,27 @@ export function TemplateFilters({ subscription }: TemplateFiltersProps) {
           <div className="mt-2 flex items-center space-x-2">
             <span
               className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                userPlan === 'premium'
+                userPlan === 'pro' || userPlan === 'enterprise'
                   ? 'bg-yellow-100 text-yellow-800'
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              {userPlan === 'premium' ? (
+              {userPlan === 'pro' || userPlan === 'enterprise' ? (
                 <>
                   <StarIcon className="mr-1 h-3 w-3" />
-                  Premium
+                  {userPlan === 'pro' ? 'Pro' : 'Enterprise'}
                 </>
               ) : (
                 'Free'
               )}
             </span>
-            {userPlan !== 'premium' && (
-              <a
-                href="/pricing"
+            {userPlan === 'free' && (
+              <button
+                onClick={() => setShowPlanModal(true)}
                 className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Upgrade
-              </a>
+              </button>
             )}
           </div>
         </div>
@@ -51,39 +82,27 @@ export function TemplateFilters({ subscription }: TemplateFiltersProps) {
         <div>
           <h3 className="text-base font-semibold text-gray-900">Categories</h3>
           <div className="mt-4 space-y-4">
-            <div className="flex items-center">
-              <input
-                id="contracts"
-                name="category"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              />
-              <label htmlFor="contracts" className="ml-3 text-sm text-gray-600">
-                Contracts
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                id="agreements"
-                name="category"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              />
-              <label htmlFor="agreements" className="ml-3 text-sm text-gray-600">
-                Agreements
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                id="letters"
-                name="category"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              />
-              <label htmlFor="letters" className="ml-3 text-sm text-gray-600">
-                Legal Letters
-              </label>
-            </div>
+            {categories.map((category) => (
+              <div key={category} className="flex items-center">
+                <input
+                  id={`category-${category.toLowerCase().replace(/\s+/g, '-')}`}
+                  name="category"
+                  type="checkbox"
+                  checked={selectedCategories.includes(category)}
+                  onChange={() => handleCategoryChange(category)}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <label 
+                  htmlFor={`category-${category.toLowerCase().replace(/\s+/g, '-')}`} 
+                  className="ml-3 text-sm text-gray-600"
+                >
+                  {category}
+                </label>
+              </div>
+            ))}
+            {categories.length === 0 && (
+              <p className="text-sm text-gray-500">No categories available</p>
+            )}
           </div>
         </div>
 
@@ -96,7 +115,8 @@ export function TemplateFilters({ subscription }: TemplateFiltersProps) {
                 id="free"
                 name="access"
                 type="checkbox"
-                defaultChecked
+                checked={selectedAccessLevels.includes('free')}
+                onChange={() => handleAccessLevelChange('free')}
                 className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
               />
               <label htmlFor="free" className="ml-3 text-sm text-gray-600">
@@ -108,6 +128,8 @@ export function TemplateFilters({ subscription }: TemplateFiltersProps) {
                 id="premium"
                 name="access"
                 type="checkbox"
+                checked={selectedAccessLevels.includes('premium')}
+                onChange={() => handleAccessLevelChange('premium')}
                 className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
               />
               <label htmlFor="premium" className="ml-3 flex items-center text-sm text-gray-600">
@@ -118,6 +140,17 @@ export function TemplateFilters({ subscription }: TemplateFiltersProps) {
           </div>
         </div>
       </div>
+
+      {/* Purchase Plan Modal */}
+      <PurchasePlanModal
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        currentPlan={userPlan}
+        onSuccess={() => {
+          setShowPlanModal(false);
+          window.location.reload();
+        }}
+      />
     </MotionDiv>
   )
 }

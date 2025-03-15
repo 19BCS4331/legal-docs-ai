@@ -161,8 +161,10 @@ export function DocumentAnalysis({
             </div>
 
             {summary ? (
-              <div className="mt-6 prose prose-indigo">
-                <p>{summary}</p>
+              <div className="mt-6 prose prose-indigo max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {summary}
+                </ReactMarkdown>
               </div>
             ) : (
               <div className="text-center py-12">
