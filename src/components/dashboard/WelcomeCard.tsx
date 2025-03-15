@@ -8,10 +8,11 @@ import { useState, useEffect } from 'react'
 
 interface WelcomeCardProps {
   user: User
+  profile: any
 }
 
-export function WelcomeCard({ user }: WelcomeCardProps) {
-  const userName = user.user_metadata.full_name || user.email?.split('@')[0] || 'there'
+export function WelcomeCard({ user, profile }: WelcomeCardProps) {
+  const userName = profile?.full_name || user.email?.split('@')[0] || 'there'
   const [greeting, setGreeting] = useState('Hello')
 
   useEffect(() => {

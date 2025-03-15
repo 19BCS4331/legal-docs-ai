@@ -54,11 +54,10 @@ export default async function NewDocumentPage() {
     .eq('user_id', session.user.id)
     .single()
 
-  // Get available templates based on user's plan
+  // Get available templates
   const { data: templates } = await supabase
     .from('document_templates')
     .select('*')
-    .contains('available_in_plan', [subscription?.plan_type || 'free'])
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

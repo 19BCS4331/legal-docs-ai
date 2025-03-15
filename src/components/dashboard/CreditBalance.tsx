@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { UserCredits, UserSubscription } from '@/types'
 import { CreditCardIcon, SparklesIcon, PlusCircleIcon } from '@heroicons/react/24/outline'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PurchaseCreditsModal } from '../credits/PurchaseCreditsModal'
+import { PurchasePlanModal } from '../pricing/PurchasePlanModal'
 
 interface CreditBalanceProps {
   credits: UserCredits | null
@@ -14,11 +14,14 @@ interface CreditBalanceProps {
 
 export function CreditBalance({ credits, subscription }: CreditBalanceProps) {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
+  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [localSubscription, setLocalSubscription] = useState(subscription)
+  const [localCredits, setLocalCredits] = useState(credits)
   const router = useRouter()
   
-  const planType = subscription?.plan_type || 'free'
+  const planType = subscription?.plan_type || localSubscription?.plan_type || 'free'
   const isUpgradeable = planType === 'free' || planType === 'pro'
-  const creditBalance = credits?.amount || 0
+  const creditBalance = credits?.amount || localCredits?.amount || 0
 
   const handlePurchaseSuccess = () => {
     router.refresh()
@@ -49,12 +52,12 @@ export function CreditBalance({ credits, subscription }: CreditBalanceProps) {
         
         <div className="flex flex-col space-y-3 mt-4">
           {isUpgradeable && (
-            <Link
-              href="/pricing"
+            <button
+              onClick={() => setShowPlanModal(true)}
               className="block w-full bg-indigo-600 text-white text-center py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
             >
               Upgrade Plan
-            </Link>
+            </button>
           )}
           
           <button
@@ -72,6 +75,16 @@ export function CreditBalance({ credits, subscription }: CreditBalanceProps) {
         isOpen={showPurchaseModal}
         onClose={() => setShowPurchaseModal(false)}
         onSuccess={handlePurchaseSuccess}
+      />
+      {/* Purchase Plan Modal */}
+      <PurchasePlanModal 
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        currentPlan={planType}
+        onSuccess={(newPlan) => {
+          setLocalSubscription(newPlan);
+          router.refresh();
+        }}
       />
     </div>
   )

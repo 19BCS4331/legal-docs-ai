@@ -6,6 +6,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon, PencilIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { PurchaseCreditsModal } from "../credits/PurchaseCreditsModal";
+import { PurchasePlanModal } from "../pricing/PurchasePlanModal";
 import { useRouter } from "next/navigation";
 
 interface ProfileModalProps {
@@ -26,9 +27,12 @@ export function ProfileModal({ isOpen, onClose, user, profile, setProfile, credi
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const planType = subscription?.plan_type || "free";
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [localSubscription, setLocalSubscription] = useState(subscription);
+  const [localCredits, setLocalCredits] = useState(credits);
+  const planType = subscription?.plan_type || localSubscription?.plan_type || "free";
   const isUpgradeable = planType === "free" || planType === "pro";
-  const creditBalance = credits?.amount || 0;
+  const creditBalance = credits?.amount || localCredits?.amount || 0;
   const router = useRouter();
 
   const handleSave = async () => {
@@ -51,6 +55,7 @@ export function ProfileModal({ isOpen, onClose, user, profile, setProfile, credi
         .single();
       setProfile(updatedProfile);
       setIsEditing(false);
+      router.refresh();
     } catch (error) {
       console.error('Error updating profile:', error);
     } finally {
@@ -70,6 +75,7 @@ export function ProfileModal({ isOpen, onClose, user, profile, setProfile, credi
           .single();
         
         if (creditsData) {
+          setLocalCredits(creditsData);
           setCredits(creditsData);
         }
       } catch (error) {
@@ -210,13 +216,12 @@ export function ProfileModal({ isOpen, onClose, user, profile, setProfile, credi
 
                       {isUpgradeable && (
                         <div className="mt-8">
-                          <Link
-                            href="/pricing"
-                            onClick={onClose}
+                          <button
+                            onClick={() => setShowPlanModal(true)}
                             className="block w-full rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                           >
                             Upgrade Plan
-                          </Link>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -234,6 +239,18 @@ export function ProfileModal({ isOpen, onClose, user, profile, setProfile, credi
         onClose={() => setShowPurchaseModal(false)}
         onSuccess={() => {
           handlePurchaseSuccess();
+        }}
+      />
+      
+      {/* Purchase Plan Modal */}
+      <PurchasePlanModal 
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        currentPlan={planType}
+        onSuccess={(newPlan) => {
+          setLocalSubscription(newPlan);
+          handlePurchaseSuccess();
+          router.refresh();
         }}
       />
     </Transition.Root>

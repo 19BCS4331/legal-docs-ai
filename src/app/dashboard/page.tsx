@@ -40,6 +40,12 @@ export default async function DashboardPage() {
     redirect('/auth')
   }
 
+  const { data : profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
   const { data: documents } = await supabase
     .from('documents')
     .select(`
@@ -87,7 +93,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
         {/* Welcome Section */}
-        <WelcomeCard user={user} />
+        <WelcomeCard user={user} profile={profile} />
 
         {/* Quick Actions */}
         <div className="space-y-4">
